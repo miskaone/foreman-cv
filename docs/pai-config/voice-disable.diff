@@ -1,0 +1,45 @@
+--- /Users/michaellydick/.claude/settings.json.bak-voice-disable-20260518-161603	2026-05-18 16:16:03
++++ /Users/michaellydick/.claude/settings.json	2026-05-18 16:16:29
+@@ -305,10 +305,6 @@
+           {
+             "type": "command",
+             "command": "${PAI_DIR}/hooks/ResponseTabReset.hook.ts"
+-          },
+-          {
+-            "type": "command",
+-            "command": "${PAI_DIR}/hooks/VoiceCompletion.hook.ts"
+           },
+           {
+             "type": "command",
+--- /Users/michaellydick/.claude/PAI/Algorithm/v3.7.0.md.bak-voice-disable-20260518-161717	2026-05-18 16:17:17
++++ /Users/michaellydick/.claude/PAI/Algorithm/v3.7.0.md	2026-05-18 16:17:31
+@@ -20,20 +20,22 @@
+ 
+ ### Voice Announcements
+ 
++**🔇 VOICE DISABLED BY USER PREFERENCE (2026-05-18).** Skip ALL voice curls — Algorithm entry, every phase transition, every "FIRST ACTION: Voice announce ..." instruction below. Do not call `http://localhost:8888/notify` at any point during Algorithm execution. Proceed straight to the PRD edit / phase work. To re-enable, the user will explicitly say "enable voice" and this section will be restored from `v3.7.0.md.bak-voice-disable-*`.
++
++<!--
++ORIGINAL VOICE INSTRUCTIONS (kept for reference, do not execute):
++
+ At Algorithm entry and every phase transition, announce via direct inline curl (not background):
+ 
+-```bash
+ curl -s -X POST http://localhost:8888/notify \
+   -H "Content-Type: application/json" \
+   -d '{"message": "MESSAGE", "voice_id": "fTtv3eikoepIosk8dTZ5", "voice_enabled": true}'
+-```
+ 
+-**Algorithm entry:** `"Entering the Algorithm"` — immediately before OBSERVE begins.
+-**Phase transitions:** `"Entering the PHASE_NAME phase."` — as the first action at each phase, before the PRD edit.
+-
+-These are direct, synchronous calls. Do not send to background. The voice notification is part of the phase transition ritual.
++Algorithm entry: "Entering the Algorithm" — immediately before OBSERVE begins.
++Phase transitions: "Entering the PHASE_NAME phase." — as the first action at each phase, before the PRD edit.
++-->
+ 
+-**CRITICAL: Only the primary agent may execute voice curls.** Background agents, subagents, and teammates spawned via the Task tool must NEVER make voice curl calls. Voice is exclusively for the main conversation agent. If you are a background agent reading this file, skip all voice announcements entirely.
++**Subagent rule still applies:** background agents, subagents, and teammates spawned via the Task tool must never make voice curl calls regardless of user preference.
+ 
+ ### PRD as System of Record
+ 

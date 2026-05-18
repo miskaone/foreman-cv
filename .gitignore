@@ -5,6 +5,19 @@
 # Claude Code / agent tooling — dev environment, not project source
 .claude/
 
+# AI coding assistants (Cursor, Continue, Aider, Copilot, Zed, Windsurf, Junie, Fleet)
+.cursor/
+.continue/
+.aider*
+.copilot/
+.junie/
+.zed/
+.fleet/
+.windsurf/
+
+# direnv local environment hooks
+.envrc
+
 # Environment / secrets
 .env
 .env.local
@@ -21,6 +34,23 @@ __pycache__/
 venv/
 env/
 *.egg-info/
+.coverage
+htmlcov/
+.tox/
+build/
+dist/
+.ipynb_checkpoints/
+
+# Node (just in case anything ends up needing it)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.*
+
+# Logs
+*.log
+logs/
 
 # Roboflow / CV artifacts
 runs/
@@ -35,6 +65,16 @@ datasets/
 
 # OS / editor
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+desktop.ini
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
 *.swp
+*.swo
+*.swn
+*~

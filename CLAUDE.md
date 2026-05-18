@@ -49,7 +49,7 @@ The `Plans/` directory in the current tree is for PRD iteration (v0.2+, open que
 
 ## Naming and slug
 
-The product name is **Foreman** everywhere user-facing. The GitHub slug is still open (PRD §9): `flowevolve/foreman` (preferred), `mlydick/foreman-cv`, or `mlydick/foreman` (collides with the Rails Procfile tool). Don't push to a remote until that decision is made — confirm with the user first.
+The product name is **Foreman** everywhere user-facing. The GitHub repo slug is **`foreman-cv`** (resolved 2026-05-18, see PRD §9). Owner (personal handle vs `flowevolve` org) is selected at `git remote add` time — don't push to a remote until the user confirms which owner.
 
 ## Build / test commands
 

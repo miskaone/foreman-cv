@@ -1,0 +1,17 @@
+name: foreman-draft-readme
+description: |
+  Use when: user wants to draft or revise the Foreman README (PRD Phase 4 deliverable).
+  Triggers: "draft readme", "write the readme", "foreman readme", "phase 4 writeup".
+  Does: Reads the PRD, baseline_metrics.md (if present), workflow.json (if present),
+        and deploy scripts, then drafts a Solutions Architect narrative README
+        following the causal chain in CLAUDE.md. Writes to $ARTIFACTS_DIR/README.draft.md
+        for human review — never overwrites repo README.md.
+  NOT for: training models, building Roboflow Workflows, editing deploy code,
+           writing the LinkedIn post (that's a separate artifact).
+
+provider: claude
+model: sonnet
+
+nodes:
+  - id: draft
+    command: foreman-draft-readme

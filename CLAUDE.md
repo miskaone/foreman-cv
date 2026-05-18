@@ -49,7 +49,7 @@ The `Plans/` directory in the current tree is for PRD iteration (v0.2+, open que
 
 ## Naming and slug
 
-The product name is **Foreman** everywhere user-facing. The GitHub repo slug is **`foreman-cv`** (resolved 2026-05-18, see PRD §9). Owner (personal handle vs `flowevolve` org) is selected at `git remote add` time — don't push to a remote until the user confirms which owner.
+The product name is **Foreman** everywhere user-facing. The GitHub repo is **`miskaone/foreman-cv`** (resolved 2026-05-18, see PRD §9). The repo may not exist on GitHub yet — confirm with the user before running `gh repo create` or `git push`.
 
 ## Build / test commands
 

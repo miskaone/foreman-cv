@@ -259,5 +259,5 @@ That's true whether or not this specific role lands. Build it for the option val
 - Does the Ashby form have a "portfolio" field, or do links go in cover letter only?
 - Worth a quick LinkedIn search of Roboflow SAs to understand the team profile before tailoring the Loom?
 - Should the writeup mention FlowEvolve / AgentForge at all, or stay focused on the capstone arc?
-- ~~**Slug decision:** push as `flowevolve/foreman` (namespaced, clean), `mlydick/foreman-cv` (disambiguated), or `mlydick/foreman` (risk of search collision with the Rails Procfile tool)? Decide before first push.~~ **RESOLVED 2026-05-18:** project name remains **Foreman** everywhere user-facing; GitHub repo slug is **`foreman-cv`**. Owner (personal vs `flowevolve` org) selected at `git remote add` time.
+- ~~**Slug decision:** push as `flowevolve/foreman` (namespaced, clean), `mlydick/foreman-cv` (disambiguated), or `mlydick/foreman` (risk of search collision with the Rails Procfile tool)? Decide before first push.~~ **RESOLVED 2026-05-18:** project name remains **Foreman** everywhere user-facing; GitHub repo is **`miskaone/foreman-cv`**.
 - Phase 5 (post-application): if no response in 10 days, follow-up with a v2 — "I added severity scoring and a multi-camera fan-out, here's what changed" — proves persistence + iteration

@@ -8,7 +8,7 @@ This repo is **PRD-stage**. The only artifact today is `roboflow-sa-capstone-reb
 
 ## What Foreman is
 
-**Foreman** is a Roboflow-native rebuild of a 2023 master's capstone (hard-hat / PPE detection), being packaged as a Solutions Architect application artifact for Roboflow (Ashby JID `fa06d985`). The product framing — "the AI foreman that walks the site, watches the workers, and calls out the violations" — is load-bearing across the repo, README, Loom, and LinkedIn post. Keep that metaphor consistent in any user-facing prose you generate.
+**Foreman** is a Roboflow-native rebuild of a 2023 master's capstone (hard-hat / PPE detection), being packaged as a Solutions Architect application artifact for Roboflow. The product framing — "the AI foreman that walks the site, watches the workers, and calls out the violations" — is load-bearing across the repo, README, Loom, and LinkedIn post. Keep that metaphor consistent in any user-facing prose you generate.
 
 The strategic causal chain the PRD is built on:
 

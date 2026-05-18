@@ -1,6 +1,6 @@
 ------
 
-## title: Foreman — Roboflow SA Capstone Rebuild project: Foreman status: PRD v0.1 owner: Mike target: Roboflow Solutions Architect application (Ashby JID fa06d985) created: 2026-05-18 philosophy: Phase 1-first delivery; ship narrow, expand only if Phase 1 lands
+## title: Foreman — Roboflow SA Capstone Rebuild project: Foreman status: PRD v0.1 owner: Mike target: Roboflow Solutions Architect application created: 2026-05-18 philosophy: Phase 1-first delivery; ship narrow, expand only if Phase 1 lands
 
 # Foreman — Roboflow SA Capstone Rebuild (PRD v0.1)
 

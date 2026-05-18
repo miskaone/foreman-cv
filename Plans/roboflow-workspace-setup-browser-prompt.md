@@ -15,7 +15,7 @@ Set up a Roboflow account + workspace so that Saturday morning's Phase 1 trainin
 
 ## Context the agent needs
 
-- Operator: Mike Lydick — email `mike.lydick@gmail.com`.
+- Operator: the human running this browser session. The operator's email/name should be passed through at runtime, not hardcoded here.
 - Target workspace name: **`flowevolve-sa-demo`** (per PRD §6.2). If taken, fall back to `foreman-cv` then `foreman-roboflow`.
 - Dataset to fork: `https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety` (717 images, 10 classes). This is the canonical Roboflow safety dataset — do not substitute.
 - Plan to select: **Free tier**. Do not upgrade to Pro. Do not enter payment info. If a paywall blocks any step, stop and report back.
@@ -25,7 +25,7 @@ Set up a Roboflow account + workspace so that Saturday morning's Phase 1 trainin
 
 1. **Open a fresh tab** at `https://app.roboflow.com/login`. Don't reuse existing tabs — the operator may have other Roboflow sessions.
 2. **Choose signup path.** Two options on the page:
-   - "Continue with Google" → recommended (uses `mike.lydick@gmail.com` directly, no email verification step). Pause and ask the operator to complete the Google OAuth consent screen.
+   - "Continue with Google" → recommended (uses the operator's Google account directly, no email verification step). Pause and ask the operator to complete the Google OAuth consent screen.
    - "Sign up with email" → fallback if Google is unavailable. Ask the operator to provide the email + password through the chat, do not type credentials yourself.
 3. **Workspace creation.** After signup, Roboflow will prompt for workspace details. Set:
    - Name: `flowevolve-sa-demo` (try this exact slug first)

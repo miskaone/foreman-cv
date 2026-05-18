@@ -11,9 +11,9 @@ Workflow artifacts: $ARTIFACTS_DIR
 ## Context
 
 Foreman is a Roboflow-native rebuild of a master's capstone (hard-hat / PPE detection),
-packaged as a Solutions Architect application artifact for Roboflow (Ashby JID `fa06d985`).
-The product framing is **"the AI foreman that walks the site, watches the workers, and
-calls out the violations."** Keep that metaphor consistent.
+packaged as a Solutions Architect application artifact for Roboflow. The product framing
+is **"the AI foreman that walks the site, watches the workers, and calls out the
+violations."** Keep that metaphor consistent.
 
 The strategic causal chain (load-bearing — every README section should advance one link):
 

@@ -98,10 +98,13 @@ nodes:
       Otherwise: proceed.
 
       If splitting, propose 2-5 child issue titles. Keep titles imperative and specific ("Train RF-DETR Small on the no-aug v1 dataset version", not "Training stuff").
+
+      Output contract for Codex: return exactly ONE JSON object matching the schema. No preamble, no markdown, no duplicate candidate objects. If decision is "proceed", set child_issues to [].
     # Claude-only fields; Codex ignores. Documents intent: this node is pure judgment, no tools.
     denied_tools: [Write, Edit, Bash]
     output_format:
       type: object
+      additionalProperties: false
       properties:
         decision:
           type: string
@@ -112,7 +115,7 @@ nodes:
           type: array
           items:
             type: string
-      required: [decision, reason]
+      required: [decision, reason, child_issues]
 
   # ── CANCEL NODE: Stop the workflow cleanly if the issue needs decomposition ──
   # Cancelled runs do not auto-resume (unlike failures), which is the right semantics here.
@@ -145,14 +148,18 @@ nodes:
       Most issues are sequential (one or two tasks, run them in order). A small minority benefit from fan-out (e.g. "write the script + write the test file" can run in parallel).
 
       agent_count: 1 for sequential, N for parallelizable.
+
+      Output contract for Codex: return exactly ONE JSON object matching the schema. No preamble, no markdown, no duplicate candidate objects. Every task must include depends_on, using [] when independent.
     denied_tools: [Write, Edit, Bash]
     output_format:
       type: object
+      additionalProperties: false
       properties:
         tasks:
           type: array
           items:
             type: object
+            additionalProperties: false
             properties:
               id:
                 type: string
@@ -162,7 +169,7 @@ nodes:
                 type: array
                 items:
                   type: string
-            required: [id, description]
+            required: [id, description, depends_on]
         can_parallelize:
           type: boolean
         agent_count:

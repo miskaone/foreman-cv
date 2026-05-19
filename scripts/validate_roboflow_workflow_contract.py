@@ -9,6 +9,8 @@ from pathlib import Path
 CONTRACT_PATH = Path("eval/roboflow_workflow_mis_1172.json")
 EXPECTED_MODEL_ID = "construction-site-safety-djmru/1"
 EXPECTED_DETECTION_BLOCK = "p1_object_detection"
+EXPECTED_OUTPUT_NAME = "p1_object_detection_predictions"
+EXPECTED_OUTPUT_TYPE = "JsonField"
 
 
 def main() -> int:
@@ -33,8 +35,17 @@ def main() -> int:
 
     outputs = spec.get("outputs", [])
     selector = f"$steps.{EXPECTED_DETECTION_BLOCK}.predictions"
-    if not any(output.get("selector") == selector for output in outputs):
-        print(f"missing output selector {selector!r}", file=sys.stderr)
+    if not any(
+        output.get("selector") == selector
+        and output.get("name") == EXPECTED_OUTPUT_NAME
+        and output.get("type") == EXPECTED_OUTPUT_TYPE
+        for output in outputs
+    ):
+        print(
+            "missing expected output contract "
+            f"(name={EXPECTED_OUTPUT_NAME!r}, type={EXPECTED_OUTPUT_TYPE!r}, selector={selector!r})",
+            file=sys.stderr,
+        )
         return 1
 
     print("roboflow workflow contract ok")

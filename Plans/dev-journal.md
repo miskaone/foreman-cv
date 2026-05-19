@@ -25,7 +25,7 @@ Newest entries at the top.
 - Archon worktrees only see committed source state, so eval artifacts had to be committed before the isolated implement rerun could verify them.  #mental-model
 - Pillow was installed for the wrong architecture under the default Python; `arch -arm64 python3` was the working local image-rendering path.  #dead-end
 
-**Commit:** `d8e0d6c` (`Publish Roboflow baseline evaluation artifacts`)
+**PR:** [#4](https://github.com/miskaone/foreman-cv/pull/4) (pending squash merge)
 
 ## 2026-05-18 — MIS-1168 — Build the three foreman dev workflow Archon YAMLs
 

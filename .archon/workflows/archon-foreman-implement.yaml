@@ -5,7 +5,7 @@ description: |
   Does: Reads dispatch-plan.json → loops through tasks (fresh context per iteration) → self-review of the diff → emits implementation-summary.md for the ship workflow.
   NOT for: starting implementation without a dispatch plan (run archon-foreman-preflight first), shipping/committing work (run archon-foreman-ship after this), one-shot fixes (use archon-fix-github-issue).
 
-# Vendor-agnostic — let provider/model come from .archon/config.yaml or --provider.
+# Pinned for this session/repo: run through Codex GPT-5.5, not vendor-agnostic inheritance.
 # This workflow MODIFIES the codebase. Always isolate in a worktree.
 worktree:
   enabled: true

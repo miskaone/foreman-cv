@@ -46,6 +46,42 @@ The branch is deleted on merge. The Linear issue auto-closes via the branch name
 
 ---
 
+## Reviewing PRs
+
+`main` is branch-protected: PRs require some review interaction before merge, even though `required_approving_review_count: 0` (solo dev). Don't reach for `--admin` reflexively — it bypasses the gate but produces no review history. Use the structured flow:
+
+```bash
+# 1. Ship workflow pushes the PR (assumes preflight + implement have already run)
+op run --env-file=.env.op -- archon workflow run archon-foreman-ship "<summary-path> MIS-XXXX"
+
+# 2. Review workflow analyzes the PR and posts findings as a comment
+op run --env-file=.env.op -- archon workflow run archon-smart-pr-review --branch review/pr-N "Review PR N"
+
+# 3. Read the surfaced findings; decide
+gh pr review N --approve
+# OR
+gh pr review N --request-changes -b "fix the X finding before merge"
+
+# 4. Merge
+gh pr merge N --squash --delete-branch
+```
+
+**Why this is better than `--admin`:**
+
+- The `archon-smart-pr-review` workflow classifies PR complexity first and only runs relevant review agents (a 3-line typo fix skips test-coverage and docs-impact). Cost-conscious by design.
+- Findings land as a PR comment — visible in repo history, harvestable for the dev journal, useful for any future collaborator who reviews the PR.
+- The `gh pr review --approve` step satisfies the branch-protection check legitimately; no admin override audit trail.
+
+**When `--admin` is acceptable:**
+
+- Documentation-only PRs where the review agents would produce no findings of value
+- Emergency rollbacks (user-directed, never automatic)
+- Bootstrapping changes (CONTRIBUTING / branch protection itself)
+
+For everything else: use the four-step flow above.
+
+---
+
 ## Commit messages
 
 Inside a feature branch, commit freely — they all get squashed at merge. Don't over-engineer commit messages on feature branches.

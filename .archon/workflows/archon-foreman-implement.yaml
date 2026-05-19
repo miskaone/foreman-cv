@@ -11,7 +11,7 @@ worktree:
   enabled: true
 
 provider: codex
-model: gpt-5.3-codex
+model: gpt-5.5
 
 nodes:
   # ── BASH NODE: Read dispatch-plan, initialize implementation-status ──

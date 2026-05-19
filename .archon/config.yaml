@@ -16,4 +16,5 @@ assistants:
   codex:
     model: gpt-5.3-codex
     modelReasoningEffort: medium
+    codexBinaryPath: /Users/michaellydick/dev/Foreman/.archon/scripts/codex-clean-env
 

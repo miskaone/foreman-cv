@@ -1,0 +1,9 @@
+#!/bin/sh
+# Archon injects CODEX_* token environment variables for its Codex provider.
+# Codex CLI 0.130.0 in this environment authenticates correctly from
+# ~/.codex/auth.json, but crashes when those JWT vars are present.
+unset CODEX_ID_TOKEN
+unset CODEX_ACCESS_TOKEN
+unset CODEX_REFRESH_TOKEN
+unset CODEX_ACCOUNT_ID
+exec /opt/homebrew/bin/codex "$@"

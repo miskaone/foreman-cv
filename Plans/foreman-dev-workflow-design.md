@@ -99,7 +99,140 @@ Conventions:
 - Tags applied to bullets, not the whole entry — granularity matters for later aggregation.
 - The "Notes" section is what an LLM later harvests when assembling the LinkedIn article. Sparse notes are fine; verbose ones get truncated.
 
-A Phase 4 sub-workflow (`archon-foreman-article-assembler`) can later read this file, filter by `#mental-model`, and draft the LinkedIn post's spine.
+A Phase 4 sub-workflow (`archon-foreman-article-assembler`) can later read this file, filter by `#mental-model`, and draft the LinkedIn post's spine. See the dedicated design section below.
+
+---
+
+## Future: archon-foreman-article-assembler workflow
+
+**Status:** design only — no YAML yet. Build trigger: Phase 4, when the dev journal has 5-15 closed-issue entries worth of content. Building earlier would over-fit the schema to thin data.
+
+**Purpose:** assemble a LinkedIn post, blog post, retrospective, or McKinsey-style report from two data sources — the dev journal (`Plans/dev-journal.md`) and Linear records (issue descriptions, comments, status transition history). Cross-referenced by `MIS-XXXX` identifier.
+
+### Five-node sketch
+
+```
+archon-foreman-article-assembler   (read-only, worktree: false)
+    │
+    ├─ fetch-linear-issues    ─┐
+    ├─ fetch-linear-history    │  parallel — all read-only
+    ├─ read-journal           ─┘
+    │
+    ├─ choose-format-and-spine    (prompt + output_format)
+    │
+    └─ draft-article              (depends on all of the above)
+```
+
+| Node | Type | What it does |
+|---|---|---|
+| `fetch-linear-issues` | bash | `curl` Linear GraphQL — pull all Foreman project issues + comments. Output JSON to `$ARTIFACTS_DIR/linear-issues.json`. |
+| `fetch-linear-history` | bash | `curl` Linear GraphQL — per-issue status transition history (timestamps for Backlog → In Progress → Done). Output `$ARTIFACTS_DIR/linear-history.json`. |
+| `read-journal` | bash + script | Copy `Plans/dev-journal.md` to artifacts. Parse by `## YYYY-MM-DD — MIS-XXXX — <title>` headers into structured JSON (per-entry: date, issue ID, what-i-built, test result, tagged-notes-by-hashtag). |
+| `choose-format-and-spine` | prompt (with `output_format`) | Reads `$ARGUMENTS` (e.g. `"LinkedIn causal-hook, 250 words"`) → decides format, target length, tone, narrative spine. Spine = the `#mental-model` thread that ties surprises into a coherent argument. |
+| `draft-article` | prompt | Drafts the article from the three artifacts + the format decision. Writes to `$ARTIFACTS_DIR/article-draft.md` for human review. Never overwrites a published artifact. |
+
+### Linear GraphQL queries needed
+
+Pre-written so the build doesn't re-derive these:
+
+**Issues + comments in the Foreman project:**
+
+```graphql
+query ForemanIssues {
+  project(id: "9f42eb5b-b1c1-46e8-887a-a009f867978a") {
+    issues(first: 50) {
+      nodes {
+        identifier
+        title
+        description
+        priority
+        state { name type }
+        createdAt
+        startedAt
+        completedAt
+        assignee { name }
+        attachments { url title }
+        comments {
+          nodes { body createdAt user { name } }
+        }
+      }
+    }
+  }
+}
+```
+
+**Status transition history per issue:**
+
+```graphql
+query IssueHistory($id: String!) {
+  issue(id: $id) {
+    history(first: 50) {
+      nodes {
+        createdAt
+        fromState { name }
+        toState { name }
+      }
+    }
+  }
+}
+```
+
+Loop over the issue identifiers from the first query; aggregate history into a single artifact for the draft node.
+
+### Journal parsing rules
+
+Entries are separated by `---` lines. Each entry starts with `## YYYY-MM-DD — MIS-XXXX — <title>`. Within an entry:
+
+| Field | Pattern |
+|---|---|
+| Date | `## (\d{4}-\d{2}-\d{2}) — ...` |
+| Issue ID | `## .* — (MIS-\d+) — ...` |
+| Title | `## .* — MIS-\d+ — (.*)` |
+| What I built | The paragraph after `**What I built:**` |
+| Test result | The single line after `**Test result:**` |
+| Tagged notes | Bullets with `#surprise`, `#dead-end`, or `#mental-model` hashtag suffix |
+| PR link | The line starting with `**PR:**` |
+
+Parser should be permissive — sparse entries (only some fields present) should not fail the run.
+
+### Hashtag → article-section mapping
+
+The mapping is the central design choice of the assembler. It determines what each tag "does" in the article:
+
+| Tag | Article role | Why |
+|---|---|---|
+| `#mental-model` | **Narrative spine.** The framing shift a reader can steal. Most articles need one strong spine + maybe one supporting frame. | This is the highest-value content — readers share articles for the mental models, not the incident logs. |
+| `#surprise` | **Hook surprises.** "I didn't expect X" — the article's hooks and twists. Best used 2-4 times. | Surprises create reader engagement but can't carry an article alone. |
+| `#dead-end` | **"What I'd do differently" section.** Used sparingly — one or two near the end. | Demonstrates self-awareness; signals "this person learned, not just shipped." Too many = a litany. |
+
+### Article format options (from `output_format` enum on choose-format-and-spine)
+
+| Format | Length | Tone | Use case |
+|---|---|---|---|
+| `linkedin-causal-hook` | 200-400 words | candid, first-person | The Phase 4 SA-application LinkedIn post. Hook → surprise → spine → CTA. |
+| `blog-post` | 800-1500 words | technical, first-person | Public engineering blog. Multi-section, with code snippets. |
+| `retrospective-mckinsey` | 600-1000 words | professional, structured | Internal retrospective for the SA reviewer (or future-you). Situation / complication / resolution. |
+| `deck` | 8-12 slides as markdown | terse, visual-first | Foundation for a Loom talk track or a portfolio review deck. |
+
+### What's NOT in this assembler's scope
+
+- **Publishing.** The output is a draft to `$ARTIFACTS_DIR`. Human reviews, polishes, and publishes via the appropriate skill (`linkedin-post`, `linkedin-obsidian-writer`, etc.).
+- **Image generation.** No diagram or thumbnail creation — that's the `Media` skill's job.
+- **Real-time updates.** This is a snapshot-in-time assembler. Re-run for a fresh draft.
+- **Sentiment polish.** The draft is a first pass; the human handles voice consistency, joke insertions, and the specific phrasings that make an article land.
+
+### Build trigger (write this on the wall before Phase 4 starts)
+
+```
+IF dev-journal.md has ≥5 entries
+AND ≥3 of those entries have a #mental-model tag
+AND Linear has ≥5 closed Foreman issues
+  → build archon-foreman-article-assembler now (one focused session)
+ELSE:
+  → continue adding journal entries; defer assembler build.
+```
+
+The threshold is empirical — fewer entries means the assembler's output is hollow regardless of how well-built the workflow is.
 
 ---
 

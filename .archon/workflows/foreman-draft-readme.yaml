@@ -9,8 +9,8 @@ description: |
   NOT for: training models, building Roboflow Workflows, editing deploy code,
            writing the LinkedIn post (that's a separate artifact).
 
-provider: claude
-model: sonnet
+provider: codex
+model: gpt-5.3-codex
 
 nodes:
   - id: draft

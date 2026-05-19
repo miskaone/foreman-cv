@@ -8,3 +8,12 @@
 #       model: sonnet
 #   docs:
 #     path: docs
+# Session default: route repo Archon AI nodes through Codex unless a workflow
+# explicitly overrides provider.
+assistant: codex
+
+assistants:
+  codex:
+    model: gpt-5.3-codex
+    modelReasoningEffort: medium
+

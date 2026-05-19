@@ -10,6 +10,9 @@ description: |
 worktree:
   enabled: true
 
+provider: codex
+model: gpt-5.3-codex
+
 nodes:
   # ── BASH NODE: Parse $ARGUMENTS into summary_path and issue_id ──
   # Expected invocation: archon workflow run archon-foreman-ship "<summary_path> <MIS-XXXX>"

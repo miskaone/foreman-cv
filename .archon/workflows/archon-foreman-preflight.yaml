@@ -13,6 +13,9 @@ worktree:
 # Required for the interactive grill-limited loop to deliver gate messages on the web UI.
 interactive: true
 
+provider: codex
+model: gpt-5.3-codex
+
 nodes:
   # ── BASH NODE: Fetch the Linear issue via GraphQL ──
   # Requires $LINEAR_API_KEY in the subprocess env (inject via op run --env-file=.env.op

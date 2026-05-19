@@ -1,0 +1,178 @@
+name: archon-foreman-ship
+description: |
+  Use when: the implement workflow has produced an implementation-summary.md and the user wants to test, journal, commit, push, and notify Linear. Mechanical and audited.
+  Triggers: "ship MIS-XXXX", "ship this work", "run ship workflow".
+  Does: Reads the summary + extracts issue ID → runs tests (best-effort) → generates a dev-journal entry → commits → pushes → posts a comment back to the Linear issue.
+  NOT for: opening PRs (do that manually after this workflow with `gh pr create --fill --draft`), force-pushing, history rewriting, merging.
+
+# Vendor-agnostic — let provider/model come from .archon/config.yaml or --provider.
+# This workflow MODIFIES the codebase (commits, pushes). Always isolate in a worktree.
+worktree:
+  enabled: true
+
+nodes:
+  # ── BASH NODE: Parse $ARGUMENTS into summary_path and issue_id ──
+  # Expected invocation: archon workflow run archon-foreman-ship "<summary_path> <MIS-XXXX>"
+  - id: read-summary
+    bash: |
+      set -euo pipefail
+      raw="${ARGUMENTS:?expected two args: <summary_path> <issue_id>}"
+      summary_path=$(echo "$raw" | awk '{print $1}')
+      issue_id=$(echo "$raw" | awk '{print $2}')
+
+      if [ -z "$summary_path" ] || [ -z "$issue_id" ]; then
+        echo "Bad arguments. Expected: <summary_path> <issue_id>. Got: $raw" >&2
+        exit 1
+      fi
+      if [ ! -f "$summary_path" ]; then
+        echo "Summary file not found: $summary_path" >&2
+        exit 1
+      fi
+
+      cp "$summary_path" "$ARTIFACTS_DIR/implementation-summary.md"
+      echo "$issue_id" > "$ARTIFACTS_DIR/issue-id.txt"
+      echo "$summary_path" > "$ARTIFACTS_DIR/summary-path.txt"
+
+      echo "Summary: $summary_path"
+      echo "Issue: $issue_id"
+    timeout: 10000
+
+  # ── BASH NODE: Best-effort test runner ──
+  # Foreman is PRD-stage and doesn't have a unit test suite. This node honors
+  # a user-provided $TEST_COMMAND if set, otherwise prints a notice and exits 0.
+  # Phase 3 onward will likely set TEST_COMMAND to something like
+  # `op run --env-file=.env.op -- python -c "import deploy.hosted_inference"`.
+  - id: run-tests
+    depends_on: [read-summary]
+    bash: |
+      set -euo pipefail
+      if [ -n "${TEST_COMMAND:-}" ]; then
+        echo "Running: $TEST_COMMAND"
+        eval "$TEST_COMMAND"
+      else
+        echo "No \$TEST_COMMAND set — skipping automated tests. Manual validation required."
+        echo "To run tests automatically next time, set TEST_COMMAND in .archon/config.yaml env block."
+      fi
+    timeout: 600000
+
+  # ── PROMPT NODE: Generate the dev-journal entry ──
+  # trigger_rule: all_done so this runs whether tests passed or failed —
+  # we want to journal failures too. The journal entry is appended to
+  # Plans/dev-journal.md as part of the commit.
+  - id: journal-entry
+    depends_on: [run-tests]
+    trigger_rule: all_done
+    prompt: |
+      Write a dev-journal entry for the Linear issue just implemented. Append it to `Plans/dev-journal.md` (use Edit; do not overwrite the file).
+
+      Inputs:
+      - Implementation summary: read `$ARTIFACTS_DIR/implementation-summary.md`
+      - Issue ID: read `$ARTIFACTS_DIR/issue-id.txt` (single line, e.g. MIS-1168)
+      - Test result: read the output of the `run-tests` node — succeeded, failed, or skipped
+      - Diff: run `git diff $BASE_BRANCH...HEAD` to see what changed
+
+      Format (append exactly this shape — date should be today's UTC date):
+
+      ```
+      ## YYYY-MM-DD — MIS-XXXX — <issue title from Linear>
+
+      **What I built:** <1-2 sentences>
+
+      **Test result:** <pass / fail / partial / skipped>
+
+      **Notes:**
+      - <one-sentence observation>  #surprise
+      - <one-sentence observation>  #dead-end
+      - <one-sentence observation>  #mental-model
+
+      ---
+      ```
+
+      Hashtag rules:
+      - `#surprise` — something you didn't expect (a metric surprised you, a tool behaved differently than expected)
+      - `#dead-end` — something you tried that didn't work and the reason
+      - `#mental-model` — a framing shift that changed how you approached the problem
+
+      Use the tags only where they fit. If only one tag fits, only write one bullet. Don't pad. Don't repeat surface-level "what" — the **What I built** line covers that.
+
+      If the journal file doesn't exist yet, create it with a one-line top-of-file header `# Foreman Dev Journal` before the first entry.
+
+      Don't commit or push — those are separate downstream nodes.
+
+  # ── BASH NODE: Stage, commit, and verify clean state ──
+  # Depends on BOTH run-tests (must succeed) and journal-entry (must succeed).
+  # If tests failed, all_success is violated → commit is skipped → ship fails cleanly.
+  - id: commit
+    depends_on: [run-tests, journal-entry]
+    bash: |
+      set -euo pipefail
+      issue_id=$(cat "$ARTIFACTS_DIR/issue-id.txt")
+
+      # Stage everything not gitignored, then verify there's something to commit
+      git add -A
+      if git diff --cached --quiet; then
+        echo "Nothing to commit. Did implement leave uncommitted changes?" >&2
+        exit 1
+      fi
+
+      # Conventional Commits style + Linear "Closes" reference for human-readable
+      # cross-link (Linear's actual auto-link is the branch name, not this string).
+      # Build the commit message with printf to keep all YAML-embedded lines indented.
+      issue_title=$(jq -r '.title // "implementation"' "$ARTIFACTS_DIR/issue.json" 2>/dev/null || echo "$issue_id")
+      commit_msg=$(printf 'feat(%s): %s\n\nCloses %s\n\nGenerated by archon-foreman-ship.\n\nCo-Authored-By: archon-foreman-ship <noreply@example.com>' "$issue_id" "$issue_title" "$issue_id")
+
+      git commit -m "$commit_msg"
+      git log -1 --format='%H %s'
+    timeout: 30000
+
+  # ── BASH NODE: Push to origin ──
+  - id: push
+    depends_on: [commit]
+    bash: |
+      set -euo pipefail
+      current_branch=$(git rev-parse --abbrev-ref HEAD)
+      if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+        echo "Refusing to push from main/master. Use a feature branch." >&2
+        exit 1
+      fi
+      git push -u origin "$current_branch"
+    timeout: 60000
+
+  # ── BASH NODE: Add a comment to the Linear issue ──
+  # Best-effort — if LINEAR_API_KEY isn't set, log and continue (don't fail the workflow).
+  # Linear's GitHub integration handles status transitions automatically on PR open/merge;
+  # this comment is just an additional human-readable trace.
+  - id: linear-update
+    depends_on: [push]
+    trigger_rule: all_done
+    bash: |
+      set -euo pipefail
+      if [ -z "${LINEAR_API_KEY:-}" ]; then
+        echo "LINEAR_API_KEY not set — skipping Linear comment. The branch name will still trigger Linear's GitHub auto-link."
+        exit 0
+      fi
+
+      issue_id=$(cat "$ARTIFACTS_DIR/issue-id.txt")
+      commit_sha=$(git rev-parse HEAD)
+      branch=$(git rev-parse --abbrev-ref HEAD)
+
+      # Linear's commentCreate needs the internal UUID. Fetch it from the identifier.
+      issue_uuid=$(curl -fsS -X POST https://api.linear.app/graphql \
+        -H "Authorization: $LINEAR_API_KEY" \
+        -H "Content-Type: application/json" \
+        --data "$(printf '{"query":"query { issue(id: \\"%s\\") { id } }"}' "$issue_id")" \
+        | jq -r '.data.issue.id // empty')
+
+      if [ -z "$issue_uuid" ]; then
+        echo "Could not resolve $issue_id to a Linear UUID. Skipping comment." >&2
+        exit 0
+      fi
+
+      comment_body=$(printf 'Shipped via \`archon-foreman-ship\` on branch \`%s\` (commit %s). Open the PR to trigger status transition.' "$branch" "$commit_sha")
+
+      curl -fsS -X POST https://api.linear.app/graphql \
+        -H "Authorization: $LINEAR_API_KEY" \
+        -H "Content-Type: application/json" \
+        --data "$(jq -n --arg issueId "$issue_uuid" --arg body "$comment_body" '{query: "mutation($issueId: String!, $body: String!) { commentCreate(input: { issueId: $issueId, body: $body }) { success comment { id url } } }", variables: {issueId: $issueId, body: $body}}')" \
+        | jq -r '.data.commentCreate.comment.url // "(no url returned)"'
+    timeout: 30000

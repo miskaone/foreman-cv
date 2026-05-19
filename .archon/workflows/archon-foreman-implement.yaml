@@ -1,0 +1,122 @@
+name: archon-foreman-implement
+description: |
+  Use when: a preflight workflow has produced a dispatch-plan.json and the user wants to execute the tasks inside it. Long-running. Modifies the codebase.
+  Triggers: "implement from this dispatch plan", "run implement workflow", "implement MIS-XXXX" (after preflight).
+  Does: Reads dispatch-plan.json → loops through tasks (fresh context per iteration) → self-review of the diff → emits implementation-summary.md for the ship workflow.
+  NOT for: starting implementation without a dispatch plan (run archon-foreman-preflight first), shipping/committing work (run archon-foreman-ship after this), one-shot fixes (use archon-fix-github-issue).
+
+# Vendor-agnostic — let provider/model come from .archon/config.yaml or --provider.
+# This workflow MODIFIES the codebase. Always isolate in a worktree.
+worktree:
+  enabled: true
+
+nodes:
+  # ── BASH NODE: Read dispatch-plan, initialize implementation-status ──
+  # The dispatch-plan.json path is passed as $ARGUMENTS (output by preflight's emit-plan).
+  - id: read-dispatch-plan
+    bash: |
+      set -euo pipefail
+      plan_path="${ARGUMENTS:?missing dispatch-plan.json path (output by archon-foreman-preflight)}"
+      if [ ! -f "$plan_path" ]; then
+        echo "Dispatch plan not found at: $plan_path" >&2
+        exit 1
+      fi
+      cp "$plan_path" "$ARTIFACTS_DIR/dispatch-plan.json"
+
+      # Initialize a status tracker: tasks list + pending/completed buckets.
+      jq '{
+        tasks: (.parallelization.tasks // []),
+        pending: [.parallelization.tasks[]?.id // empty],
+        completed: []
+      }' "$plan_path" > "$ARTIFACTS_DIR/implementation-status.json"
+
+      jq -r '"Loaded plan with \(.tasks | length) tasks:\n" + (.tasks | map("  - \(.id): \(.description)") | join("\n"))' "$ARTIFACTS_DIR/implementation-status.json"
+    timeout: 10000
+
+  # ── LOOP NODE: Stateless Ralph-style implementer ──
+  # fresh_context: true means each iteration starts cold. The loop reads its
+  # state from $ARTIFACTS_DIR (the implementation-status.json file is the
+  # source of truth). The AI updates that file as tasks complete.
+  #
+  # max_iterations is set generously (12) — the AI should signal completion
+  # via <promise>ALL_TASKS_COMPLETE</promise> well before hitting it.
+  - id: implement-loop
+    depends_on: [read-dispatch-plan]
+    idle_timeout: 1800000   # 30 min per iteration — implementation can take a while
+    loop:
+      prompt: |
+        FRESH SESSION — you have no memory of prior iterations. Treat the files on disk as the source of truth.
+
+        Step 1: Read these two files to bootstrap context:
+          - $ARTIFACTS_DIR/dispatch-plan.json — the full task list with descriptions and depends_on
+          - $ARTIFACTS_DIR/implementation-status.json — what's already done ("completed") and what's left ("pending")
+
+        Step 2: If the "pending" array is empty, output the literal token <promise>ALL_TASKS_COMPLETE</promise> on its own line and stop.
+
+        Step 3: Otherwise, pick the next pending task where every entry in its depends_on appears in "completed". If multiple are eligible, pick the first in the pending order.
+
+        Step 4: Implement THAT ONE TASK only. Do not implement other tasks in this iteration.
+          - Read whatever code is needed
+          - Make the changes
+          - Run a type-check / lint / format if the language supports it
+          - Do NOT commit — commits happen in the separate ship workflow
+
+        Step 5: Update $ARTIFACTS_DIR/implementation-status.json — move the just-completed task's id from "pending" to "completed". Use Edit, not a wholesale rewrite, to preserve the rest of the structure.
+
+        Step 6: Output a brief one-paragraph summary of what changed in this iteration so the next iteration has context if it needs it.
+
+        Rules:
+        - One task per iteration. Don't batch.
+        - If a task is blocked by something not in the plan (missing dep, unclear scope), leave it in pending and output: BLOCKED: <id> — <reason>. The runtime will catch this on the next iteration and either you or a human will resolve.
+        - Don't open PRs, push branches, or touch git history. That's the ship workflow's job.
+      until: ALL_TASKS_COMPLETE
+      max_iterations: 12
+      fresh_context: true
+
+  # ── PROMPT NODE: Self-review of the diff ──
+  # Read-only review. Bash is allowed (for git diff / git status); Write and Edit are denied.
+  # Codex equivalent: configure via ~/.codex/config.toml [tools] section.
+  - id: self-review
+    depends_on: [implement-loop]
+    prompt: |
+      Review the diff against the base branch for the work just completed. Use `git diff $BASE_BRANCH...HEAD` to see all changes.
+
+      Look for:
+      - Implementation gaps: read $ARTIFACTS_DIR/implementation-status.json — are any tasks still in "pending"? If so, flag what's incomplete.
+      - Obvious code-quality issues: leftover TODOs, debug prints, dead imports, commented-out code.
+      - Test coverage: did each non-doc change get a corresponding test? If tests exist in this repo and were skipped, flag.
+      - Doc drift: did this PR change anything that should be reflected in CLAUDE.md, README.md, or CONTRIBUTING.md but isn't?
+      - Scope creep: anything in the diff that's NOT in the dispatch-plan task list.
+
+      Output a brief markdown report. No code changes — the ship workflow will run tests and the human will resolve flags.
+
+      Don't be exhaustive. Three to seven bullet points is plenty.
+    denied_tools: [Write, Edit]
+
+  # ── BASH NODE: Emit implementation-summary.md for the ship workflow ──
+  # Using bash (not script) so $self-review.output is auto-shell-quoted —
+  # avoids template-literal corruption from backticks / code spans in AI output.
+  - id: emit-summary
+    depends_on: [self-review]
+    bash: |
+      set -euo pipefail
+      out="$ARTIFACTS_DIR/implementation-summary.md"
+
+      {
+        echo "# Implementation Summary"
+        echo ""
+        echo "_Generated by archon-foreman-implement at $(date -u +%FT%TZ)_"
+        echo ""
+        echo "## Self-review"
+        echo ""
+        echo $self-review.output
+        echo ""
+        echo "## Task status"
+        echo ""
+        echo "See \`\$ARTIFACTS_DIR/implementation-status.json\` for full task completion details."
+        echo ""
+        jq -r '"- " + (.completed | length | tostring) + " completed, " + (.pending | length | tostring) + " pending"' "$ARTIFACTS_DIR/implementation-status.json" 2>/dev/null || echo "- (status file missing)"
+      } > "$out"
+
+      echo "wrote $out"
+    timeout: 10000

@@ -13,8 +13,8 @@ worktree:
 # Required for the interactive grill-limited loop to deliver gate messages on the web UI.
 interactive: true
 
-provider: codex
-model: gpt-5.5
+provider: codex  # pinned; do not inherit vendor-agnostic runtime selection
+model: gpt-5.5  # pinned for Foreman Archon runs in this session
 
 nodes:
   # ── BASH NODE: Fetch the Linear issue via GraphQL ──

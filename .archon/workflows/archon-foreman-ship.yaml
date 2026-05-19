@@ -10,8 +10,8 @@ description: |
 worktree:
   enabled: true
 
-provider: codex
-model: gpt-5.5
+provider: codex  # pinned; do not inherit vendor-agnostic runtime selection
+model: gpt-5.5  # pinned for Foreman Archon runs in this session
 
 nodes:
   # ── BASH NODE: Parse $ARGUMENTS into summary_path and issue_id ──

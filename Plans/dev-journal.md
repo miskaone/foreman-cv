@@ -12,6 +12,21 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-19 — MIS-1158 — Commit eval/baseline_metrics.md + sample_predictions
+
+**What I built:** Generated Roboflow dataset version `construction-site-safety-djmru/1`, trained RF-DETR Small, and committed the Phase 1 baseline eval artifacts: `eval/baseline_metrics.md`, `eval/roboflow_training_report.png`, `eval/sample_predictions/best.jpg`, `eval/sample_predictions/worst.jpg`, and `eval/roboflow_training_results.json`.
+
+**Test result:** Complete. Roboflow training finished successfully with validation mAP@0.5 **61.2%**, validation mAP@0.5:0.95 **45.7%**, test mAP@0.5 **65.2%**, and test mAP@0.5:0.95 **47.0%**. The Archon implement workflow reran on Codex/GPT-5.5 using the preflight dispatch plan and completed with all three tasks done and zero pending.
+
+**Notes:**
+- Roboflow MCP had enough access to generate the version and start/monitor training, even though the local 1Password Roboflow item did not expose a usable API key.  #surprise
+- `versions_generate` required the resize payload key `format: "Stretch to"`; using `method` failed with `resize format "undefined" is invalid`.  #dead-end
+- Archon implement requires the exact preflight `dispatch-plan.json` path as `$ARGUMENTS`; running it without that path fails at `read-dispatch-plan`.  #mental-model
+- Archon worktrees only see committed source state, so eval artifacts had to be committed before the isolated implement rerun could verify them.  #mental-model
+- Pillow was installed for the wrong architecture under the default Python; `arch -arm64 python3` was the working local image-rendering path.  #dead-end
+
+**PR:** [#4](https://github.com/miskaone/foreman-cv/pull/4) (pending squash merge)
+
 ## 2026-05-18 — MIS-1168 — Build the three foreman dev workflow Archon YAMLs
 
 **What I built:** Three chained vendor-agnostic Archon workflows (`preflight`, `implement`, `ship`) for the per-issue dev cycle, plus the `.env.op` plumbing for 1Password credential injection. All three pass `archon validate workflows`; discovery count went from 21 → 24.

@@ -8,3 +8,13 @@
 #       model: sonnet
 #   docs:
 #     path: docs
+# Session default: route repo Archon AI nodes through Codex unless a workflow
+# explicitly overrides provider.
+assistant: codex
+
+assistants:
+  codex:
+    model: gpt-5.5
+    modelReasoningEffort: medium
+    codexBinaryPath: ./.archon/scripts/codex-clean-env
+

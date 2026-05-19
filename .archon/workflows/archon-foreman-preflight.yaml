@@ -5,13 +5,16 @@ description: |
   Does: Reads a Linear issue → interactive grill-limited loop (max 5 questions) → structured decomposition decision → cancel-on-split OR within-issue parallelization plan → emits dispatch-plan.json for the implement workflow to consume.
   NOT for: bug-fix workflows (use archon-fix-github-issue), feature implementation (use archon-foreman-implement after this preflight succeeds), Roboflow training (manual, not in Archon's path).
 
-# Vendor-agnostic — omit `provider:` and `model:` to inherit from .archon/config.yaml or per-invocation --provider.
+# Pinned for this session/repo: run through Codex GPT-5.5, not vendor-agnostic inheritance.
 # This workflow is read-only relative to the codebase; we set worktree to false to avoid copy cost.
 worktree:
   enabled: false
 
 # Required for the interactive grill-limited loop to deliver gate messages on the web UI.
 interactive: true
+
+provider: codex  # pinned; do not inherit vendor-agnostic runtime selection
+model: gpt-5.5  # pinned for Foreman Archon runs in this session
 
 nodes:
   # ── BASH NODE: Fetch the Linear issue via GraphQL ──

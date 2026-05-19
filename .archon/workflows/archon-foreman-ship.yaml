@@ -5,10 +5,13 @@ description: |
   Does: Reads the summary + extracts issue ID → runs tests (best-effort) → generates a dev-journal entry → commits → pushes → posts a comment back to the Linear issue.
   NOT for: opening PRs (do that manually after this workflow with `gh pr create --fill --draft`), force-pushing, history rewriting, merging.
 
-# Vendor-agnostic — let provider/model come from .archon/config.yaml or --provider.
+# Pinned for this session/repo: run through Codex GPT-5.5, not vendor-agnostic inheritance.
 # This workflow MODIFIES the codebase (commits, pushes). Always isolate in a worktree.
 worktree:
   enabled: true
+
+provider: codex  # pinned; do not inherit vendor-agnostic runtime selection
+model: gpt-5.5  # pinned for Foreman Archon runs in this session
 
 nodes:
   # ── BASH NODE: Parse $ARGUMENTS into summary_path and issue_id ──

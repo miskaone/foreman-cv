@@ -16,7 +16,11 @@ nodes:
   - id: read-summary
     bash: |
       set -euo pipefail
-      raw="${ARGUMENTS:?expected two args: <summary_path> <issue_id>}"
+      raw="$ARGUMENTS"
+      if [ -z "$raw" ]; then
+        echo "expected two args: <summary_path> <issue_id>" >&2
+        exit 1
+      fi
       summary_path=$(echo "$raw" | awk '{print $1}')
       issue_id=$(echo "$raw" | awk '{print $2}')
 

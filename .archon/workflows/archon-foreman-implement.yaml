@@ -16,7 +16,11 @@ nodes:
   - id: read-dispatch-plan
     bash: |
       set -euo pipefail
-      plan_path="${ARGUMENTS:?missing dispatch-plan.json path (output by archon-foreman-preflight)}"
+      plan_path="$ARGUMENTS"
+      if [ -z "$plan_path" ]; then
+        echo "missing dispatch-plan.json path (output by archon-foreman-preflight)" >&2
+        exit 1
+      fi
       if [ ! -f "$plan_path" ]; then
         echo "Dispatch plan not found at: $plan_path" >&2
         exit 1

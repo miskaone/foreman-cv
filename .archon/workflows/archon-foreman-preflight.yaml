@@ -20,9 +20,17 @@ nodes:
   - id: fetch-issue
     bash: |
       set -euo pipefail
-      issue_id="${ARGUMENTS:?missing Linear issue ID (e.g. MIS-1168)}"
+      issue_id="$ARGUMENTS"
+      if [ -z "$issue_id" ]; then
+        echo "missing Linear issue ID (e.g. MIS-1168)" >&2
+        exit 1
+      fi
+      if [ -z "${LINEAR_API_KEY:-}" ]; then
+        echo "missing LINEAR_API_KEY env var (run via: op run --env-file=.env.op -- ...)" >&2
+        exit 1
+      fi
       curl -fsS -X POST https://api.linear.app/graphql \
-        -H "Authorization: ${LINEAR_API_KEY:?missing LINEAR_API_KEY env var}" \
+        -H "Authorization: $LINEAR_API_KEY" \
         -H "Content-Type: application/json" \
         --data "$(printf '{"query":"query { issue(id: \\"%s\\") { identifier title description state { name } project { name } team { key name } } }"}' "$issue_id")" \
         | tee "$ARTIFACTS_DIR/issue.json"

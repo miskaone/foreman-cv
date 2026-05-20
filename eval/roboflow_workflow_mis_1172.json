@@ -1,6 +1,6 @@
 {
   "contract_version": 2,
-  "linear_issue": "MIS-1179",
+  "linear_issue": "MIS-1173",
   "parent_issue": "MIS-1172",
   "workflow": {
     "name": "foreman-mis-1172",
@@ -13,7 +13,11 @@
     "detection_block": "p1_object_detection",
     "all_detections": "all_detections",
     "violation_filter": "ppe_violation_filter",
-    "violation_output": "ppe_violations"
+    "violation_output": "ppe_violations",
+    "violation_count": "ppe_violation_count",
+    "violation_expression": "ppe_violation_expression",
+    "violations": "violations",
+    "has_violations": "has_violations"
   },
   "model": {
     "project_id": "mikes-workspace-3onpi/construction-site-safety-djmru",
@@ -77,6 +81,59 @@
             "NO-Mask"
           ]
         }
+      },
+      {
+        "type": "roboflow_core/property_definition@v1",
+        "name": "ppe_violation_count",
+        "data": "$steps.ppe_violation_filter.predictions",
+        "operations": [
+          {
+            "type": "DetectionsPropertyExtract",
+            "property_name": "count"
+          }
+        ]
+      },
+      {
+        "type": "roboflow_core/expression@v1",
+        "name": "ppe_violation_expression",
+        "data": {
+          "violations": "$steps.ppe_violation_count.output"
+        },
+        "switch": {
+          "type": "CasesDefinition",
+          "cases": [
+            {
+              "type": "CaseDefinition",
+              "condition": {
+                "type": "StatementGroup",
+                "statements": [
+                  {
+                    "type": "BinaryStatement",
+                    "left_operand": {
+                      "type": "DynamicOperand",
+                      "operand_name": "violations"
+                    },
+                    "comparator": {
+                      "type": ">"
+                    },
+                    "right_operand": {
+                      "type": "StaticOperand",
+                      "value": 0
+                    }
+                  }
+                ]
+              },
+              "result": {
+                "type": "StaticCaseResult",
+                "value": true
+              }
+            }
+          ],
+          "default": {
+            "type": "StaticCaseResult",
+            "value": false
+          }
+        }
       }
     ],
     "outputs": [
@@ -94,6 +151,16 @@
         "type": "JsonField",
         "name": "ppe_violations",
         "selector": "$steps.ppe_violation_filter.predictions"
+      },
+      {
+        "type": "JsonField",
+        "name": "violations",
+        "selector": "$steps.ppe_violation_count.output"
+      },
+      {
+        "type": "JsonField",
+        "name": "has_violations",
+        "selector": "$steps.ppe_violation_expression.output"
       }
     ]
   },
@@ -112,8 +179,11 @@
     }
   },
   "scope_notes": [
-    "MIS-1179 adds ppe_violation_filter as a pure class allowlist branch from $steps.p1_object_detection.predictions.",
+    "MIS-1173 adds ppe_violation_count and ppe_violation_expression on top of the existing ppe_violations branch.",
+    "ppe_violation_count derives violations from $steps.ppe_violation_filter.predictions only; ppe_violation_expression evaluates only violations > 0.",
     "ppe_violation_filter keeps only exact class_name matches for NO-Hardhat, NO-Safety Vest, and NO-Mask, preserving original prediction object shape and order.",
-    "ppe_violations maps directly to $steps.ppe_violation_filter.predictions; count, expression, sinks, dataset sink, visualization, normalization, enrichment, and person-correlation branches remain deferred."
+    "ppe_violations maps directly to $steps.ppe_violation_filter.predictions; raw/all detections remain debug outputs only.",
+    "violations is the numeric count from $steps.ppe_violation_filter.predictions only, and has_violations is the expression result for violations > 0.",
+    "Sinks, dataset sink, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
   ]
 }

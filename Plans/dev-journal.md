@@ -12,6 +12,21 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-20 — MIS-1173 — Wire violation count and expression block for violations greater than zero
+
+**What I built:** Added the violation-count and expression contract on top of the filtered `ppe_violations` branch, exposing `violations` and `has_violations` as stable workflow outputs. The validator now locks the count source, the `violations > 0` expression, and deterministic zero/compliant/positive sample cases.
+
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, `python3 scripts/validate_roboflow_workflow_contract.py`, and `git diff --check` all passed. The ship workflow `run-tests` node skipped because no `TEST_COMMAND` is configured.
+
+**Notes:**
+- `git diff main...HEAD` was empty in the ship worktree even though the implementation summary and implementation worktree showed the MIS-1173 contract changes.  #surprise
+- The run-tests node had no `TEST_COMMAND`, so it could only skip automated testing while the implementation summary carried the validator evidence.  #dead-end
+- The business pivot is a scalar contract: count filtered noncompliance detections first, then let the expression read only `violations > 0`.  #mental-model
+
+**PR:** [#9](https://github.com/miskaone/foreman-cv/pull/9) (pending merge)
+
+---
+
 ## 2026-05-20 — MIS-1179 — Add the PPE violation filter branch for NO-Hardhat, NO-Safety Vest, and NO-Mask
 
 **What I built:** Added the `ppe_violation_filter` branch to the Roboflow workflow contract so raw detector predictions are filtered to exactly `NO-Hardhat`, `NO-Safety Vest`, and `NO-Mask`, then exposed as `ppe_violations`. The validator now locks that contract while continuing to reject downstream count, expression, sink, and person-correlation scope.

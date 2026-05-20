@@ -23,9 +23,22 @@ Newest entries at the top.
 - Generic repo test discovery did not find a test suite for this narrow artifact, so the contract validator became the meaningful verification path.  #dead-end
 - `all_detections` is a downstream availability contract, not a transformation or alerting branch, which keeps visualization/metadata work decoupled from violation logic.  #mental-model
 
-**PR:** [#6](https://github.com/miskaone/foreman-cv/pull/6) (pending merge)
+**PR:** [#6](https://github.com/miskaone/foreman-cv/pull/6) (squash-merged as `e8a62c2`)
 
 ---
+
+## 2026-05-19 — MIS-1177 — Create the named Roboflow detection block using construction-site-safety-djmru/1
+
+**What I built:** Created the Roboflow Workflow contract for the P2 detection block, exported `eval/roboflow_workflow_mis_1172.json`, and added `scripts/validate_roboflow_workflow_contract.py` to lock the expected model, block name, output name, output type, and selector.
+
+**Test result:** Complete. The validator passed with `roboflow workflow contract ok`, CodeRabbit passed on PR #5, and the PR merged as `8498f46` after the review thread was outdated by the hardening patch.
+
+**Notes:**
+- CodeRabbit caught that selector-only output validation could allow a workflow with the right path but the wrong output identity to pass.  #surprise
+- The first PR pass validated the output selector but not its `name` or `type`; downstream slices need all three fields stable.  #dead-end
+- Treat the committed workflow export plus validator as the contract boundary for the next Roboflow Workflow slices, not just as a snapshot.  #mental-model
+
+**PR:** [#5](https://github.com/miskaone/foreman-cv/pull/5) (squash-merged as `8498f46`)
 
 ## 2026-05-19 — MIS-1158 — Commit eval/baseline_metrics.md + sample_predictions
 

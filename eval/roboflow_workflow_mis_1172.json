@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "linear_issue": "MIS-1177",
+  "linear_issue": "MIS-1178",
   "parent_issue": "MIS-1172",
   "workflow": {
     "name": "foreman-mis-1172",
@@ -43,6 +43,11 @@
         "type": "JsonField",
         "name": "p1_object_detection_predictions",
         "selector": "$steps.p1_object_detection.predictions"
+      },
+      {
+        "type": "JsonField",
+        "name": "all_detections",
+        "selector": "$steps.p1_object_detection.predictions"
       }
     ]
   },
@@ -61,8 +66,8 @@
     }
   },
   "scope_notes": [
-    "MIS-1177 creates or updates only the parent workflow detection block contract.",
+    "MIS-1178 preserves the parent workflow detection block contract and exposes all_detections as the stable raw pass-through output alias.",
     "Count, expression, sinks, dataset sink, and visualization branches are intentionally deferred to later P2 child issues.",
-    "The all_detections, ppe_violation_filter, and ppe_violations names are reserved for downstream slices and are not implemented in this first contract artifact."
+    "The all_detections output is active and maps directly to $steps.p1_object_detection.predictions; ppe_violation_filter and ppe_violations remain reserved for downstream slices."
   ]
 }

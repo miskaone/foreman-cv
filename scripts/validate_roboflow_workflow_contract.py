@@ -89,9 +89,6 @@ def validate_active_learning_sink(contract: dict[str, object]) -> bool:
             file=sys.stderr,
         )
         return False
-    if sink != EXPECTED_ACTIVE_LEARNING_SINK:
-        print(f"unexpected active learning sink target: {sink!r}", file=sys.stderr)
-        return False
     if "/" in str(sink.get("project_slug")):
         print(f"project_slug must not include workspace or version: {sink.get('project_slug')!r}", file=sys.stderr)
         return False
@@ -101,6 +98,9 @@ def validate_active_learning_sink(contract: dict[str, object]) -> bool:
     target_parts = str(sink.get("target")).split("/")
     if target_parts != [sink.get("workspace_slug"), sink.get("project_slug")]:
         print(f"target must be workspace_slug/project_slug only: {sink.get('target')!r}", file=sys.stderr)
+        return False
+    if sink != EXPECTED_ACTIVE_LEARNING_SINK:
+        print(f"unexpected active learning sink target: {sink!r}", file=sys.stderr)
         return False
     return True
 

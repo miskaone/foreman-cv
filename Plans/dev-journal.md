@@ -16,12 +16,14 @@ Newest entries at the top.
 
 **What I built:** Declared the canonical shared active-learning sink target for violation-positive examples using `foreman-violation-active-learning` as the stable Roboflow project slug. The validator now fails fast when that target is missing or duplicated while keeping routing, dedupe semantics, per-class sinks, notification sinks, and dataset version pinning out of this slice.
 
-**Test result:** Skipped. The ship workflow `run-tests` node completed through the no-`TEST_COMMAND` path, while the implementation summary recorded passing JSON, py_compile, validator, and `git diff --check` verification.
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, `python3 scripts/validate_roboflow_workflow_contract.py`, and `git diff --check` all passed. The ship workflow `run-tests` node skipped because no `TEST_COMMAND` is configured.
 
 **Notes:**
 - The ship worktree's `git diff main...HEAD` was empty even though the implementation branch had the committed MIS-1182 contract diff at `e5159d1`.  #surprise
 - Without `TEST_COMMAND`, the ship node can only record a skipped automated test pass-through, so the meaningful evidence remains in the implementation summary's validator checks.  #dead-end
 - The active-learning work split cleanly into a target contract first, with event routing and human-readable path documentation deferred to sibling issues.  #mental-model
+
+**PR:** [#10](https://github.com/miskaone/foreman-cv/pull/10) (pending review/merge)
 
 ---
 

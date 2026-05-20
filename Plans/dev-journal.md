@@ -12,6 +12,21 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-20 — MIS-1178 — Preserve the all-detections workflow path for visualization and metadata
+
+**What I built:** Exposed `all_detections` as a stable raw workflow contract alias for `$steps.p1_object_detection.predictions` while preserving the existing `p1_object_detection_predictions` output. The validator now locks that contract and rejects violation-counting or sink-style scope creep for this slice.
+
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, `python3 scripts/validate_roboflow_workflow_contract.py`, and `git diff --check` all passed.
+
+**Notes:**
+- `git diff main...HEAD` was empty even though the implementation summary identified the contract change surface, so ship-time diff checks can miss work that was not present in the committed range.  #surprise
+- Generic repo test discovery did not find a test suite for this narrow artifact, so the contract validator became the meaningful verification path.  #dead-end
+- `all_detections` is a downstream availability contract, not a transformation or alerting branch, which keeps visualization/metadata work decoupled from violation logic.  #mental-model
+
+**PR:** [#6](https://github.com/miskaone/foreman-cv/pull/6) (pending merge)
+
+---
+
 ## 2026-05-19 — MIS-1158 — Commit eval/baseline_metrics.md + sample_predictions
 
 **What I built:** Generated Roboflow dataset version `construction-site-safety-djmru/1`, trained RF-DETR Small, and committed the Phase 1 baseline eval artifacts: `eval/baseline_metrics.md`, `eval/roboflow_training_report.png`, `eval/sample_predictions/best.jpg`, `eval/sample_predictions/worst.jpg`, and `eval/roboflow_training_results.json`.

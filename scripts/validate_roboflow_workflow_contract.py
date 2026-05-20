@@ -31,6 +31,43 @@ EXPECTED_ACTIVE_LEARNING_SINK = {
     "scope": "violation-positive examples only",
 }
 ALLOWED_ACTIVE_LEARNING_SINK_KEYS = set(EXPECTED_ACTIVE_LEARNING_SINK)
+EXPECTED_ALERT_SINK_STUBS = [
+    {
+        "name": "email_violation_alert_stub",
+        "type": "email",
+        "enabled": False,
+        "environment": "test_only",
+        "delivery_mode": "disabled",
+        "sends_live_notifications": False,
+        "gate_output": EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME,
+        "source_output": EXPECTED_VIOLATIONS_OUTPUT_NAME,
+        "placeholder_recipient": "foreman-alerts@example.invalid",
+        "placeholder_subject": "[TEST ONLY] Foreman PPE violation alert",
+        "notes": "Disabled non-production placeholder; replace before production handoff.",
+    },
+    {
+        "name": "slack_violation_alert_stub",
+        "type": "slack",
+        "enabled": False,
+        "environment": "test_only",
+        "delivery_mode": "disabled",
+        "sends_live_notifications": False,
+        "gate_output": EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME,
+        "source_output": EXPECTED_VIOLATIONS_OUTPUT_NAME,
+        "placeholder_webhook_url": "https://example.invalid/slack/foreman-alerts-placeholder",
+        "placeholder_channel": "#foreman-alerts-placeholder",
+        "notes": "Disabled non-production placeholder; replace before production handoff.",
+    },
+]
+ALLOWED_ALERT_SINK_STUB_KEYS_BY_TYPE = {
+    stub["type"]: set(stub)
+    for stub in EXPECTED_ALERT_SINK_STUBS
+}
+PLACEHOLDER_ADDRESS_FIELDS = {
+    "placeholder_recipient",
+    "placeholder_webhook_url",
+    "placeholder_channel",
+}
 FORBIDDEN_STEP_EXACT_NAMES = {"dataset_sink"}
 FORBIDDEN_STEP_TERMS = {
     "association",
@@ -105,6 +142,69 @@ def validate_active_learning_sink(contract: dict[str, object]) -> bool:
     return True
 
 
+def validate_alert_sink_stubs(contract: dict[str, object]) -> bool:
+    stubs = contract.get("alert_sink_stubs")
+    if not isinstance(stubs, list):
+        print("missing alert_sink_stubs list", file=sys.stderr)
+        return False
+    if stubs != EXPECTED_ALERT_SINK_STUBS:
+        print(f"unexpected alert sink stubs: {stubs!r}", file=sys.stderr)
+        return False
+
+    seen_types = set()
+    for stub in stubs:
+        if not isinstance(stub, dict):
+            print(f"unexpected alert sink stub shape: {stub!r}", file=sys.stderr)
+            return False
+
+        stub_type = stub.get("type")
+        seen_types.add(stub_type)
+        allowed_keys = ALLOWED_ALERT_SINK_STUB_KEYS_BY_TYPE.get(stub_type)
+        if allowed_keys is None:
+            print(f"unexpected alert sink stub type: {stub_type!r}", file=sys.stderr)
+            return False
+        extra_keys = set(stub) - allowed_keys
+        missing_keys = allowed_keys - set(stub)
+        if extra_keys or missing_keys:
+            print(
+                "unexpected alert sink stub keys: "
+                f"type={stub_type!r}, extra={sorted(extra_keys)!r}, missing={sorted(missing_keys)!r}",
+                file=sys.stderr,
+            )
+            return False
+
+        if stub.get("enabled") is not False or stub.get("sends_live_notifications") is not False:
+            print(f"alert sink stub must remain disabled/test-only: {stub!r}", file=sys.stderr)
+            return False
+        if stub.get("environment") != "test_only" or stub.get("delivery_mode") != "disabled":
+            print(f"alert sink stub must declare disabled test-only delivery: {stub!r}", file=sys.stderr)
+            return False
+        if stub.get("gate_output") != EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME:
+            print(f"alert sink stub must be gated by has_violations: {stub!r}", file=sys.stderr)
+            return False
+        if stub.get("source_output") != EXPECTED_VIOLATIONS_OUTPUT_NAME:
+            print(f"alert sink stub must source ppe_violations: {stub!r}", file=sys.stderr)
+            return False
+
+        for field in PLACEHOLDER_ADDRESS_FIELDS & set(stub):
+            value = str(stub.get(field, ""))
+            if "placeholder" not in value.lower() and not value.endswith("@example.invalid"):
+                print(f"alert sink field must use placeholder-only value: {field}={value!r}", file=sys.stderr)
+                return False
+            if re.search(r"(xox[baprs]-|hooks\.slack\.com|api[_-]?key|secret|token)", value, re.IGNORECASE):
+                print(f"alert sink field looks like a live secret or endpoint: {field}={value!r}", file=sys.stderr)
+                return False
+        subject = str(stub.get("placeholder_subject", ""))
+        if "placeholder_subject" in stub and "[TEST ONLY]" not in subject:
+            print(f"email alert subject must be explicitly test-only: {subject!r}", file=sys.stderr)
+            return False
+
+    if seen_types != {"email", "slack"}:
+        print(f"expected email and slack alert sink stubs, found {sorted(seen_types)!r}", file=sys.stderr)
+        return False
+    return True
+
+
 def has_forbidden_step_marker(value: object) -> bool:
     normalized = str(value or "").lower()
     parts = {part for part in re.split(r"[^a-z0-9]+", normalized) if part}
@@ -150,6 +250,8 @@ def validate_sample_cases() -> bool:
 def main() -> int:
     contract = json.loads(CONTRACT_PATH.read_text())
     if not validate_active_learning_sink(contract):
+        return 1
+    if not validate_alert_sink_stubs(contract):
         return 1
 
     spec = contract["specification"]

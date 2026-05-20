@@ -1,6 +1,6 @@
 {
   "contract_version": 2,
-  "linear_issue": "MIS-1173",
+  "linear_issue": "MIS-1174",
   "parent_issue": "MIS-1172",
   "workflow": {
     "name": "foreman-mis-1172",
@@ -34,6 +34,34 @@
       "source_output": "ppe_violations",
       "positive_gate_output": "has_violations",
       "scope": "violation-positive examples only"
+    }
+  ],
+  "alert_sink_stubs": [
+    {
+      "name": "email_violation_alert_stub",
+      "type": "email",
+      "enabled": false,
+      "environment": "test_only",
+      "delivery_mode": "disabled",
+      "sends_live_notifications": false,
+      "gate_output": "has_violations",
+      "source_output": "ppe_violations",
+      "placeholder_recipient": "foreman-alerts@example.invalid",
+      "placeholder_subject": "[TEST ONLY] Foreman PPE violation alert",
+      "notes": "Disabled non-production placeholder; replace before production handoff."
+    },
+    {
+      "name": "slack_violation_alert_stub",
+      "type": "slack",
+      "enabled": false,
+      "environment": "test_only",
+      "delivery_mode": "disabled",
+      "sends_live_notifications": false,
+      "gate_output": "has_violations",
+      "source_output": "ppe_violations",
+      "placeholder_webhook_url": "https://example.invalid/slack/foreman-alerts-placeholder",
+      "placeholder_channel": "#foreman-alerts-placeholder",
+      "notes": "Disabled non-production placeholder; replace before production handoff."
     }
   ],
   "specification": {
@@ -197,6 +225,7 @@
     "ppe_violations maps directly to $steps.ppe_violation_filter.predictions; raw/all detections remain debug outputs only.",
     "violations is the numeric count from $steps.ppe_violation_filter.predictions only, and has_violations is the expression result for violations > 0.",
     "active_learning_sinks declares one pre-provisioned shared Roboflow project target for violation-positive examples: mikes-workspace-3onpi/foreman-violation-active-learning.",
-    "Active-learning sink routing/execution, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
+    "alert_sink_stubs declares disabled/test-only Email and Slack placeholders gated by has_violations; committed values do not send live notifications.",
+    "Active-learning sink routing/execution, production notification delivery, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
   ]
 }

@@ -12,6 +12,23 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-20 — MIS-1174 — Configure alert sinks for violation-triggered Email and Slack notifications
+
+**What I built:** Added disabled/test-only Email and Slack alert sink stubs to `eval/roboflow_workflow_mis_1172.json`, gated by `has_violations` and sourcing `ppe_violations`. The committed stubs are non-production placeholders only: both remain `enabled: false`, `environment: test_only`, `delivery_mode: disabled`, and `sends_live_notifications: false`, so they do not send live notifications.
+
+**Production handoff:** Before enabling alert delivery, replace the Email stub's `placeholder_recipient` and `placeholder_subject` with the customer-approved recipient list and production subject/body template. Replace the Slack stub's `placeholder_webhook_url` and `placeholder_channel` with a real Slack app/webhook secret and customer-approved channel. Keep `gate_output: has_violations` and `source_output: ppe_violations` unless the workflow contract is intentionally changed and revalidated.
+
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, `python3 scripts/validate_roboflow_workflow_contract.py`, and `git diff --check` all passed. The ship workflow `run-tests` node skipped because no `TEST_COMMAND` is configured.
+
+**Notes:**
+- The contract now provides reviewer evidence for alerting intent without committing recipients, webhook URLs, secrets, or live routing.  #mental-model
+- Production notification delivery is a deploy-time handoff, not part of the committed Phase 2 alert-stub slice.  #mental-model
+- The ship workflow again saw an empty `main...HEAD` diff until the implementation files were copied into the ship branch, so commit visibility remains a workflow hazard.  #surprise
+
+**PR:** Pending ship workflow.
+
+---
+
 ## 2026-05-20 — MIS-1182 — Configure a shared active-learning dataset sink for violation-positive examples
 
 **What I built:** Declared the canonical shared active-learning sink target for violation-positive examples using `foreman-violation-active-learning` as the stable Roboflow project slug. The validator now fails fast when that target is missing or duplicated while keeping routing, dedupe semantics, per-class sinks, notification sinks, and dataset version pinning out of this slice.

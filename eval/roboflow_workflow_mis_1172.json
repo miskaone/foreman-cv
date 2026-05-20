@@ -24,6 +24,18 @@
     "model_id": "construction-site-safety-djmru/1",
     "source": "P1 Roboflow RF-DETR Small baseline"
   },
+  "active_learning_sinks": [
+    {
+      "name": "shared_violation_positive_examples",
+      "workspace_slug": "mikes-workspace-3onpi",
+      "project_slug": "foreman-violation-active-learning",
+      "target": "mikes-workspace-3onpi/foreman-violation-active-learning",
+      "provisioning": "pre_provisioned",
+      "source_output": "ppe_violations",
+      "positive_gate_output": "has_violations",
+      "scope": "violation-positive examples only"
+    }
+  ],
   "specification": {
     "version": "1.0",
     "inputs": [
@@ -184,6 +196,7 @@
     "ppe_violation_filter keeps only exact class_name matches for NO-Hardhat, NO-Safety Vest, and NO-Mask, preserving original prediction object shape and order.",
     "ppe_violations maps directly to $steps.ppe_violation_filter.predictions; raw/all detections remain debug outputs only.",
     "violations is the numeric count from $steps.ppe_violation_filter.predictions only, and has_violations is the expression result for violations > 0.",
-    "Sinks, dataset sink, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
+    "active_learning_sinks declares one pre-provisioned shared Roboflow project target for violation-positive examples: mikes-workspace-3onpi/foreman-violation-active-learning.",
+    "Active-learning sink routing/execution, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
   ]
 }

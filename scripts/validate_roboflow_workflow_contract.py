@@ -20,6 +20,17 @@ EXPECTED_VIOLATION_COUNT_OUTPUT_NAME = "violations"
 EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME = "has_violations"
 EXPECTED_OUTPUT_TYPE = "JsonField"
 EXPECTED_VIOLATION_CLASSES = ("NO-Hardhat", "NO-Safety Vest", "NO-Mask")
+EXPECTED_ACTIVE_LEARNING_SINK = {
+    "name": "shared_violation_positive_examples",
+    "workspace_slug": "mikes-workspace-3onpi",
+    "project_slug": "foreman-violation-active-learning",
+    "target": "mikes-workspace-3onpi/foreman-violation-active-learning",
+    "provisioning": "pre_provisioned",
+    "source_output": EXPECTED_VIOLATIONS_OUTPUT_NAME,
+    "positive_gate_output": EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME,
+    "scope": "violation-positive examples only",
+}
+ALLOWED_ACTIVE_LEARNING_SINK_KEYS = set(EXPECTED_ACTIVE_LEARNING_SINK)
 FORBIDDEN_STEP_EXACT_NAMES = {"dataset_sink"}
 FORBIDDEN_STEP_TERMS = {
     "association",
@@ -54,6 +65,44 @@ POSITIVE_NONCOMPLIANCE_SAMPLE = [
     {"class_name": "NO-Safety Vest"},
     {"class_name": "NO-Mask"},
 ]
+
+
+def validate_active_learning_sink(contract: dict[str, object]) -> bool:
+    sinks = contract.get("active_learning_sinks")
+    if not isinstance(sinks, list):
+        print("missing active_learning_sinks list", file=sys.stderr)
+        return False
+    if len(sinks) != 1:
+        print(f"expected exactly one active learning sink target, found {len(sinks)}", file=sys.stderr)
+        return False
+
+    sink = sinks[0]
+    if not isinstance(sink, dict):
+        print(f"unexpected active learning sink shape: {sink!r}", file=sys.stderr)
+        return False
+    extra_keys = set(sink) - ALLOWED_ACTIVE_LEARNING_SINK_KEYS
+    missing_keys = ALLOWED_ACTIVE_LEARNING_SINK_KEYS - set(sink)
+    if extra_keys or missing_keys:
+        print(
+            "unexpected active learning sink keys: "
+            f"extra={sorted(extra_keys)!r}, missing={sorted(missing_keys)!r}",
+            file=sys.stderr,
+        )
+        return False
+    if "/" in str(sink.get("project_slug")):
+        print(f"project_slug must not include workspace or version: {sink.get('project_slug')!r}", file=sys.stderr)
+        return False
+    if "/" in str(sink.get("workspace_slug")):
+        print(f"workspace_slug must not include project or version: {sink.get('workspace_slug')!r}", file=sys.stderr)
+        return False
+    target_parts = str(sink.get("target")).split("/")
+    if target_parts != [sink.get("workspace_slug"), sink.get("project_slug")]:
+        print(f"target must be workspace_slug/project_slug only: {sink.get('target')!r}", file=sys.stderr)
+        return False
+    if sink != EXPECTED_ACTIVE_LEARNING_SINK:
+        print(f"unexpected active learning sink target: {sink!r}", file=sys.stderr)
+        return False
+    return True
 
 
 def has_forbidden_step_marker(value: object) -> bool:
@@ -100,6 +149,9 @@ def validate_sample_cases() -> bool:
 
 def main() -> int:
     contract = json.loads(CONTRACT_PATH.read_text())
+    if not validate_active_learning_sink(contract):
+        return 1
+
     spec = contract["specification"]
     stable_contract_names = contract.get("stable_contract_names", {})
     if stable_contract_names.get("detection_block") != EXPECTED_DETECTION_BLOCK:

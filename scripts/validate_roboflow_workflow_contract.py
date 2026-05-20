@@ -18,13 +18,17 @@ EXPECTED_OUTPUT_TYPE = "JsonField"
 EXPECTED_VIOLATION_CLASSES = ("NO-Hardhat", "NO-Safety Vest", "NO-Mask")
 FORBIDDEN_STEP_EXACT_NAMES = {"dataset_sink"}
 FORBIDDEN_STEP_TERMS = {
+    "association",
+    "correlation",
     "count",
     "email",
     "expression",
     "notification",
+    "person",
     "sink",
     "slack",
     "visualization",
+    "worker",
 }
 
 
@@ -38,6 +42,13 @@ def main() -> int:
     contract = json.loads(CONTRACT_PATH.read_text())
     spec = contract["specification"]
     stable_contract_names = contract.get("stable_contract_names", {})
+    if stable_contract_names.get("detection_block") != EXPECTED_DETECTION_BLOCK:
+        print(
+            "unexpected stable_contract_names.detection_block: "
+            f"{stable_contract_names.get('detection_block')!r}",
+            file=sys.stderr,
+        )
+        return 1
     if stable_contract_names.get("all_detections") != EXPECTED_ALL_DETECTIONS_OUTPUT_NAME:
         print(
             "unexpected stable_contract_names.all_detections: "

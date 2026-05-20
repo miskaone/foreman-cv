@@ -12,6 +12,19 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-20 — MIS-1182 — Configure a shared active-learning dataset sink for violation-positive examples
+
+**What I built:** Declared the canonical shared active-learning sink target for violation-positive examples using `foreman-violation-active-learning` as the stable Roboflow project slug. The validator now fails fast when that target is missing or duplicated while keeping routing, dedupe semantics, per-class sinks, notification sinks, and dataset version pinning out of this slice.
+
+**Test result:** Skipped. The ship workflow `run-tests` node completed through the no-`TEST_COMMAND` path, while the implementation summary recorded passing JSON, py_compile, validator, and `git diff --check` verification.
+
+**Notes:**
+- The ship worktree's `git diff main...HEAD` was empty even though the implementation branch had the committed MIS-1182 contract diff at `e5159d1`.  #surprise
+- Without `TEST_COMMAND`, the ship node can only record a skipped automated test pass-through, so the meaningful evidence remains in the implementation summary's validator checks.  #dead-end
+- The active-learning work split cleanly into a target contract first, with event routing and human-readable path documentation deferred to sibling issues.  #mental-model
+
+---
+
 ## 2026-05-20 — MIS-1173 — Wire violation count and expression block for violations greater than zero
 
 **What I built:** Added the violation-count and expression contract on top of the filtered `ppe_violations` branch, exposing `violations` and `has_violations` as stable workflow outputs. The validator now locks the count source, the `violations > 0` expression, and deterministic zero/compliant/positive sample cases.

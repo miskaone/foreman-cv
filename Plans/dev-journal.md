@@ -23,7 +23,7 @@ Newest entries at the top.
 - The run-tests node had no `TEST_COMMAND`, so it could only skip automated testing while the implementation summary carried the validator evidence.  #dead-end
 - The business pivot is a scalar contract: count filtered noncompliance detections first, then let the expression read only `violations > 0`.  #mental-model
 
-**PR:** [#9](https://github.com/miskaone/foreman-cv/pull/9) (pending merge)
+**PR:** [#9](https://github.com/miskaone/foreman-cv/pull/9) (squash-merged as )
 
 ---
 

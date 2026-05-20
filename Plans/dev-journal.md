@@ -23,7 +23,7 @@ Newest entries at the top.
 - Without `TEST_COMMAND`, the ship node can only record a skipped automated test pass-through, so the meaningful evidence remains in the implementation summary's validator checks.  #dead-end
 - The active-learning work split cleanly into a target contract first, with event routing and human-readable path documentation deferred to sibling issues.  #mental-model
 
-**PR:** [#10](https://github.com/miskaone/foreman-cv/pull/10) (pending review/merge)
+**PR:** [#10](https://github.com/miskaone/foreman-cv/pull/10) (squash-merged as `53f65af`)
 
 ---
 

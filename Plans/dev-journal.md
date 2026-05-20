@@ -25,7 +25,7 @@ Newest entries at the top.
 - Production notification delivery is a deploy-time handoff, not part of the committed Phase 2 alert-stub slice.  #mental-model
 - The ship workflow again saw an empty `main...HEAD` diff until the implementation files were copied into the ship branch, so commit visibility remains a workflow hazard.  #surprise
 
-**PR:** Pending ship workflow.
+**PR:** [#11](https://github.com/miskaone/foreman-cv/pull/11) (squash-merged as `6312221`)
 
 ---
 

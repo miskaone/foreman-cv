@@ -12,6 +12,21 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-20 — MIS-1179 — Add the PPE violation filter branch for NO-Hardhat, NO-Safety Vest, and NO-Mask
+
+**What I built:** Added the `ppe_violation_filter` branch to the Roboflow workflow contract so raw detector predictions are filtered to exactly `NO-Hardhat`, `NO-Safety Vest`, and `NO-Mask`, then exposed as `ppe_violations`. The validator now locks that contract while continuing to reject downstream count, expression, sink, and person-correlation scope.
+
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, `python3 scripts/validate_roboflow_workflow_contract.py`, and `git diff --check` all passed. The ship workflow `run-tests` node skipped because no `TEST_COMMAND` is configured.
+
+**Notes:**
+- `git diff main...HEAD` was empty even though the implementation summary showed the contract change surface, so the ship workflow can lose sight of work that has not reached the committed range.  #surprise
+- The run-tests node had no `TEST_COMMAND`, so automated ship-time testing could only record a skip while relying on the implementation summary's validator evidence.  #dead-end
+- The PPE filter is a pure class-allowlist branch over raw predictions, not the place for counts, gates, sinks, normalization, or person association.  #mental-model
+
+**PR:** [#8](https://github.com/miskaone/foreman-cv/pull/8) (pending merge)
+
+---
+
 ## 2026-05-20 — MIS-1178 — Preserve the all-detections workflow path for visualization and metadata
 
 **What I built:** Exposed `all_detections` as a stable raw workflow contract alias for `$steps.p1_object_detection.predictions` while preserving the existing `p1_object_detection_predictions` output. The validator now locks that contract and rejects violation-counting or sink-style scope creep for this slice.

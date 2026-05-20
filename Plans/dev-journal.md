@@ -23,7 +23,7 @@ Newest entries at the top.
 - The run-tests node had no `TEST_COMMAND`, so automated ship-time testing could only record a skip while relying on the implementation summary's validator evidence.  #dead-end
 - The PPE filter is a pure class-allowlist branch over raw predictions, not the place for counts, gates, sinks, normalization, or person association.  #mental-model
 
-**PR:** [#8](https://github.com/miskaone/foreman-cv/pull/8) (pending merge)
+**PR:** [#8](https://github.com/miskaone/foreman-cv/pull/8) (squash-merged as `82696de`)
 
 ---
 

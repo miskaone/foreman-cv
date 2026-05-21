@@ -30,6 +30,34 @@ EXPECTED_ACTIVE_LEARNING_SINK = {
     "source_output": EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH,
     "positive_gate_output": EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME,
     "scope": "violation-positive examples only",
+    "record_contract": {
+        "dedupe_key": {
+            "name": "dedupe_key",
+            "required": True,
+            "derivation_stage": "before_class_expansion",
+            "primary_identity": "upstream positive frame/source event identity",
+            "preferred_source": "persisted event_id or frame_id when present",
+            "fallback_source": (
+                "stable composite of normalized source identity plus frame index, "
+                "event timestamp or offset, and capture-window identity"
+            ),
+            "empty_value_allowed": False,
+        },
+        "collapse_strategy": {
+            "key": "dedupe_key",
+            "one_sink_example_per": "positive frame/source event",
+            "duplicate_class_expanded_records": "collapse_to_one_visual_example",
+            "preserve_metadata": [
+                "noncompliance_classes",
+                "noncompliance_reasons",
+                "source_detections",
+            ],
+        },
+        "record_scope": (
+            "one positive frame/source event maps to one active-learning sink example, "
+            "not one noncompliance class"
+        ),
+    },
 }
 ALLOWED_ACTIVE_LEARNING_SINK_KEYS = set(EXPECTED_ACTIVE_LEARNING_SINK)
 EXPECTED_ALERT_SINK_STUBS = [
@@ -109,6 +137,40 @@ POSITIVE_NONCOMPLIANCE_SAMPLE = [
     {"class_name": "Safety Vest"},
     {"class_name": "NO-Safety Vest"},
     {"class_name": "NO-Mask"},
+]
+CLASS_EXPANDED_DUPLICATE_ACTIVE_LEARNING_SAMPLE = [
+    {
+        "dedupe_key": "site-a/camera-7/frame-0042/window-001",
+        "noncompliance_class": "NO-Hardhat",
+        "noncompliance_reason": "missing hardhat",
+        "source_detection": {"class_name": "NO-Hardhat", "detection_id": "det-hardhat"},
+    },
+    {
+        "dedupe_key": "site-a/camera-7/frame-0042/window-001",
+        "noncompliance_class": "NO-Mask",
+        "noncompliance_reason": "missing mask",
+        "source_detection": {"class_name": "NO-Mask", "detection_id": "det-mask"},
+    },
+    {
+        "dedupe_key": "site-a/camera-7/frame-0042/window-001",
+        "noncompliance_class": "NO-Safety Vest",
+        "noncompliance_reason": "missing safety vest",
+        "source_detection": {"class_name": "NO-Safety Vest", "detection_id": "det-vest"},
+    },
+]
+DISTINCT_EVENT_ACTIVE_LEARNING_SAMPLE = [
+    {
+        "dedupe_key": "site-a/camera-7/frame-0042/window-001",
+        "noncompliance_class": "NO-Hardhat",
+        "noncompliance_reason": "missing hardhat",
+        "source_detection": {"class_name": "NO-Hardhat", "detection_id": "det-hardhat-42"},
+    },
+    {
+        "dedupe_key": "site-a/camera-7/frame-0043/window-001",
+        "noncompliance_class": "NO-Hardhat",
+        "noncompliance_reason": "missing hardhat",
+        "source_detection": {"class_name": "NO-Hardhat", "detection_id": "det-hardhat-43"},
+    },
 ]
 
 
@@ -244,6 +306,64 @@ def post_expression_positive_result(
     return ppe_violations if has_violations else []
 
 
+def append_unique(values: list[object], value: object) -> None:
+    if value not in values:
+        values.append(value)
+
+
+def collapse_active_learning_records(
+    records: list[dict[str, object]],
+) -> tuple[list[dict[str, object]], list[str]]:
+    examples_by_key: dict[str, dict[str, object]] = {}
+    errors: list[str] = []
+
+    for index, record in enumerate(records):
+        dedupe_key = record.get("dedupe_key")
+        if not isinstance(dedupe_key, str) or not dedupe_key.strip():
+            errors.append(f"record {index} missing non-empty dedupe_key")
+            continue
+        if dedupe_key != dedupe_key.strip():
+            errors.append(f"record {index} dedupe_key must be canonical")
+            continue
+
+        noncompliance_class = record.get("noncompliance_class")
+        if not isinstance(noncompliance_class, str) or not noncompliance_class.strip():
+            errors.append(f"record {index} missing non-empty noncompliance_class")
+            continue
+        noncompliance_reason = record.get("noncompliance_reason")
+        if not isinstance(noncompliance_reason, str) or not noncompliance_reason.strip():
+            errors.append(f"record {index} missing non-empty noncompliance_reason")
+            continue
+        source_detection = record.get("source_detection")
+        if not isinstance(source_detection, dict):
+            errors.append(f"record {index} missing source_detection metadata")
+            continue
+
+        example = examples_by_key.setdefault(
+            dedupe_key,
+            {
+                "dedupe_key": dedupe_key,
+                "noncompliance_classes": [],
+                "noncompliance_reasons": [],
+                "source_detections": [],
+            },
+        )
+        append_unique(
+            example["noncompliance_classes"],
+            noncompliance_class,
+        )
+        append_unique(
+            example["noncompliance_reasons"],
+            noncompliance_reason,
+        )
+        append_unique(
+            example["source_detections"],
+            source_detection,
+        )
+
+    return list(examples_by_key.values()), errors
+
+
 def validate_sample_cases() -> bool:
     expected_cases: list[
         tuple[str, list[dict[str, object]], int, bool, list[dict[str, object]]]
@@ -288,6 +408,115 @@ def validate_sample_cases() -> bool:
     return True
 
 
+def validate_active_learning_dedupe_cases() -> bool:
+    missing_key_examples, missing_key_errors = collapse_active_learning_records(
+        [
+            {
+                "noncompliance_class": "NO-Hardhat",
+                "noncompliance_reason": "missing hardhat",
+                "source_detection": {"class_name": "NO-Hardhat"},
+            }
+        ]
+    )
+    if missing_key_examples or missing_key_errors != ["record 0 missing non-empty dedupe_key"]:
+        print(
+            "missing dedupe_key sample did not fail active-learning validation",
+            file=sys.stderr,
+        )
+        return False
+
+    empty_key_examples, empty_key_errors = collapse_active_learning_records(
+        [
+            {
+                "dedupe_key": " ",
+                "noncompliance_class": "NO-Mask",
+                "noncompliance_reason": "missing mask",
+                "source_detection": {"class_name": "NO-Mask"},
+            }
+        ]
+    )
+    if empty_key_examples or empty_key_errors != ["record 0 missing non-empty dedupe_key"]:
+        print(
+            "empty dedupe_key sample did not fail active-learning validation",
+            file=sys.stderr,
+        )
+        return False
+
+    whitespace_key_examples, whitespace_key_errors = collapse_active_learning_records(
+        [
+            {
+                "dedupe_key": " site-a/camera-7/frame-0042/window-001 ",
+                "noncompliance_class": "NO-Mask",
+                "noncompliance_reason": "missing mask",
+                "source_detection": {"class_name": "NO-Mask"},
+            }
+        ]
+    )
+    if whitespace_key_examples or whitespace_key_errors != [
+        "record 0 dedupe_key must be canonical"
+    ]:
+        print(
+            "non-canonical dedupe_key sample did not fail active-learning validation",
+            file=sys.stderr,
+        )
+        return False
+
+    missing_metadata_examples, missing_metadata_errors = collapse_active_learning_records(
+        [
+            {
+                "dedupe_key": "site-a/camera-7/frame-0042/window-001",
+                "noncompliance_class": "NO-Mask",
+            }
+        ]
+    )
+    if missing_metadata_examples or missing_metadata_errors != [
+        "record 0 missing non-empty noncompliance_reason"
+    ]:
+        print(
+            "missing active-learning metadata sample did not fail validation",
+            file=sys.stderr,
+        )
+        return False
+
+    collapsed_examples, collapse_errors = collapse_active_learning_records(
+        CLASS_EXPANDED_DUPLICATE_ACTIVE_LEARNING_SAMPLE
+    )
+    expected_collapsed_examples = [
+        {
+            "dedupe_key": "site-a/camera-7/frame-0042/window-001",
+            "noncompliance_classes": ["NO-Hardhat", "NO-Mask", "NO-Safety Vest"],
+            "noncompliance_reasons": [
+                "missing hardhat",
+                "missing mask",
+                "missing safety vest",
+            ],
+            "source_detections": [
+                {"class_name": "NO-Hardhat", "detection_id": "det-hardhat"},
+                {"class_name": "NO-Mask", "detection_id": "det-mask"},
+                {"class_name": "NO-Safety Vest", "detection_id": "det-vest"},
+            ],
+        }
+    ]
+    if collapse_errors or collapsed_examples != expected_collapsed_examples:
+        print(
+            f"unexpected active-learning collapse result: {collapsed_examples!r}",
+            file=sys.stderr,
+        )
+        return False
+
+    distinct_examples, distinct_errors = collapse_active_learning_records(
+        DISTINCT_EVENT_ACTIVE_LEARNING_SAMPLE
+    )
+    if distinct_errors or len(distinct_examples) != 2:
+        print(
+            "distinct positive frame/source events should remain separate active-learning examples",
+            file=sys.stderr,
+        )
+        return False
+
+    return True
+
+
 def main() -> int:
     contract = json.loads(CONTRACT_PATH.read_text())
     if not validate_active_learning_sink(contract):
@@ -329,6 +558,7 @@ def main() -> int:
         "violation_count": EXPECTED_VIOLATION_COUNT_BLOCK,
         "violation_expression": EXPECTED_VIOLATION_EXPRESSION_BLOCK,
         "post_expression_positive_branch": EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH,
+        "active_learning_dedupe_key": "dedupe_key",
         "violations": EXPECTED_VIOLATION_COUNT_OUTPUT_NAME,
         "has_violations": EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME,
     }
@@ -643,6 +873,8 @@ def main() -> int:
         return 1
 
     if not validate_sample_cases():
+        return 1
+    if not validate_active_learning_dedupe_cases():
         return 1
 
     print("roboflow workflow contract ok")

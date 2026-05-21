@@ -12,6 +12,21 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-21 — MIS-1184 — Deduplicate active-learning examples by positive source event
+
+**What I built:** Locked the active-learning dedupe contract so every sink record requires a non-empty `dedupe_key` derived before class expansion from the upstream positive frame/source event. The validator now proves missing and empty keys fail, duplicate class-expanded records with the same `dedupe_key` collapse into one visual example, and noncompliance classes, reasons, and source detections remain merged metadata on that example.
+
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, `python3 scripts/validate_roboflow_workflow_contract.py`, and `git diff --check` all passed.
+
+**Notes:**
+- The active-learning unit is the positive frame/source event, not the noncompliance class; class expansion enriches metadata but must not multiply visual examples.  #mental-model
+- Missing or blank `dedupe_key` is now a hard validator failure because the sink cannot safely collapse records without event identity.  #mental-model
+- Near-miss evidence matters in both directions: same-key class-expanded records collapse, while distinct positive event keys stay separate even when they share the same class.  #mental-model
+
+**PR:** Pending ship workflow.
+
+---
+
 ## 2026-05-21 — MIS-1183 — Route active-learning sink through the post-expression positive branch
 
 **What I built:** Locked the active-learning routing evidence so `shared_violation_positive_examples` must source `post_expression_violation_positive`, the named branch immediately downstream of `has_violations`. The validator now rejects direct `ppe_violations` sink routing, raw/upstream routing, missing branch outputs, and branch behavior that would pass zero/compliant examples into the active-learning sink.

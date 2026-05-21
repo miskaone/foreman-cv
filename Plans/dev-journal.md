@@ -23,7 +23,7 @@ Newest entries at the top.
 - Zero and compliant-only samples prove the branch emits an empty list, so negative or near-miss frames do not reach the violation-positive training sink.  #mental-model
 - The ship workflow again saw an empty `main...HEAD` diff until the implementation files were copied into the ship branch, so commit visibility remains a workflow hazard.  #surprise
 
-**PR:** [#12](https://github.com/miskaone/foreman-cv/pull/12) (pending review/merge)
+**PR:** [#12](https://github.com/miskaone/foreman-cv/pull/12) (squash-merged as `81f2a7e`)
 
 ---
 

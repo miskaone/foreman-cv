@@ -12,6 +12,21 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-21 — MIS-1185 — Document the active-learning routing evidence path
+
+**What I built:** Added the human-readable audit path for the canonical Workflow export at `eval/roboflow_workflow_mis_1172.json`, tying `shared_violation_positive_examples` to `mikes-workspace-3onpi/foreman-violation-active-learning`, `post_expression_violation_positive`, the `has_violations` gate, and the pre-class-expansion `dedupe_key` contract without changing routing semantics.
+
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, `python3 scripts/validate_roboflow_workflow_contract.py`, and `git diff --check` all passed.
+
+**Notes:**
+- Reviewer trust now has a direct JSON-to-README path instead of relying on issue history to connect the active-learning sink, branch, gate, and dedupe contract.  #mental-model
+- The non-goals are part of the contract: this slice does not enable notification delivery, visualization, normalization, enrichment, person correlation, raw-detection fallback, compliant counts, or person/PPE totals.  #mental-model
+- `eval/roboflow_workflow_mis_1172.json` remains the canonical export; MIS-1185 only documents and aligns evidence around it.  #mental-model
+
+**PR:** [#14](https://github.com/miskaone/foreman-cv/pull/14) (pending review/merge)
+
+---
+
 ## 2026-05-21 — MIS-1184 — Deduplicate active-learning examples by positive source event
 
 **What I built:** Locked the active-learning dedupe contract so every sink record requires a non-empty `dedupe_key` derived before class expansion from the upstream positive frame/source event. The validator now proves missing and empty keys fail, duplicate class-expanded records with the same `dedupe_key` collapse into one visual example, and noncompliance classes, reasons, and source detections remain merged metadata on that example.

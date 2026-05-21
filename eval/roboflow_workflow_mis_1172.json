@@ -1,6 +1,6 @@
 {
   "contract_version": 2,
-  "linear_issue": "MIS-1184",
+  "linear_issue": "MIS-1185",
   "parent_issue": "MIS-1172",
   "workflow": {
     "name": "foreman-mis-1172",
@@ -301,6 +301,7 @@
     "active_learning_sinks requires a non-empty dedupe_key computed before class expansion from the upstream positive frame/source event identity, preferring persisted event/frame IDs and falling back to a stable source/frame/timestamp/window composite.",
     "The active-learning sink collapses duplicate class-expanded records with the same dedupe_key into one visual example while preserving merged noncompliance classes, reasons, and source detections as metadata.",
     "Validator samples reject missing or empty active-learning dedupe_key values and prove same-key class-expanded records collapse while distinct positive frame/source events remain separate.",
+    "MIS-1185 evidence alignment confirms this file is the canonical export for the shared_violation_positive_examples sink path without changing active-learning routing semantics.",
     "alert_sink_stubs declares disabled/test-only Email and Slack placeholders gated by has_violations; committed values do not send live notifications.",
     "Production notification delivery, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
   ]

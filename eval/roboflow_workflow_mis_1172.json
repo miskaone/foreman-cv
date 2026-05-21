@@ -1,6 +1,6 @@
 {
   "contract_version": 2,
-  "linear_issue": "MIS-1183",
+  "linear_issue": "MIS-1184",
   "parent_issue": "MIS-1172",
   "workflow": {
     "name": "foreman-mis-1172",
@@ -17,6 +17,7 @@
     "violation_count": "ppe_violation_count",
     "violation_expression": "ppe_violation_expression",
     "post_expression_positive_branch": "post_expression_violation_positive",
+    "active_learning_dedupe_key": "dedupe_key",
     "violations": "violations",
     "has_violations": "has_violations"
   },
@@ -34,7 +35,29 @@
       "provisioning": "pre_provisioned",
       "source_output": "post_expression_violation_positive",
       "positive_gate_output": "has_violations",
-      "scope": "violation-positive examples only"
+      "scope": "violation-positive examples only",
+      "record_contract": {
+        "dedupe_key": {
+          "name": "dedupe_key",
+          "required": true,
+          "derivation_stage": "before_class_expansion",
+          "primary_identity": "upstream positive frame/source event identity",
+          "preferred_source": "persisted event_id or frame_id when present",
+          "fallback_source": "stable composite of normalized source identity plus frame index, event timestamp or offset, and capture-window identity",
+          "empty_value_allowed": false
+        },
+        "collapse_strategy": {
+          "key": "dedupe_key",
+          "one_sink_example_per": "positive frame/source event",
+          "duplicate_class_expanded_records": "collapse_to_one_visual_example",
+          "preserve_metadata": [
+            "noncompliance_classes",
+            "noncompliance_reasons",
+            "source_detections"
+          ]
+        },
+        "record_scope": "one positive frame/source event maps to one active-learning sink example, not one noncompliance class"
+      }
     }
   ],
   "alert_sink_stubs": [
@@ -275,6 +298,9 @@
     "violations is the numeric count from $steps.ppe_violation_filter.predictions only, and has_violations is the expression result for violations > 0.",
     "post_expression_violation_positive is the named positive branch immediately downstream of has_violations; it returns ppe_violations only when has_violations is true and returns an empty list otherwise.",
     "active_learning_sinks declares one pre-provisioned shared Roboflow project target for violation-positive examples: mikes-workspace-3onpi/foreman-violation-active-learning, sourced from post_expression_violation_positive.",
+    "active_learning_sinks requires a non-empty dedupe_key computed before class expansion from the upstream positive frame/source event identity, preferring persisted event/frame IDs and falling back to a stable source/frame/timestamp/window composite.",
+    "The active-learning sink collapses duplicate class-expanded records with the same dedupe_key into one visual example while preserving merged noncompliance classes, reasons, and source detections as metadata.",
+    "Validator samples reject missing or empty active-learning dedupe_key values and prove same-key class-expanded records collapse while distinct positive frame/source events remain separate.",
     "alert_sink_stubs declares disabled/test-only Email and Slack placeholders gated by has_violations; committed values do not send live notifications.",
     "Production notification delivery, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
   ]

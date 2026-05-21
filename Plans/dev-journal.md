@@ -23,7 +23,7 @@ Newest entries at the top.
 - The non-goals are part of the contract: this slice does not enable notification delivery, visualization, normalization, enrichment, person correlation, raw-detection fallback, compliant counts, or person/PPE totals.  #mental-model
 - `eval/roboflow_workflow_mis_1172.json` remains the canonical export; MIS-1185 only documents and aligns evidence around it.  #mental-model
 
-**PR:** [#14](https://github.com/miskaone/foreman-cv/pull/14) (pending review/merge)
+**PR:** [#14](https://github.com/miskaone/foreman-cv/pull/14) (squash-merged as `6a01828`)
 
 ---
 

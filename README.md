@@ -42,6 +42,18 @@ graph LR
 
 The expression block is where ML output becomes a business signal. That gate — and the sinks it feeds — is the Solutions Architect conversation in one diagram: alerting (operations), active learning from positive violation frames (model improvement), and visualization (audit + reviewer trust).
 
+## Workflow audit path
+
+The canonical Phase 2 Workflow export is [`eval/roboflow_workflow_mis_1172.json`](eval/roboflow_workflow_mis_1172.json). Reviewers can audit the active-learning path directly from that JSON:
+
+- `stable_contract_names.has_violations` names the expression gate produced by `ppe_violation_expression` after `ppe_violation_count` counts only filtered `ppe_violations`.
+- `stable_contract_names.post_expression_positive_branch` names `post_expression_violation_positive`, the branch that returns `ppe_violations` only when `has_violations` is true and returns an empty list otherwise.
+- `active_learning_sinks[0].name` is `shared_violation_positive_examples`, and its target is `mikes-workspace-3onpi/foreman-violation-active-learning`.
+- `active_learning_sinks[0].source_output` must stay `post_expression_violation_positive`; the sink is not fed by raw detections, compliant detections, or the pre-gate `ppe_violations` output.
+- `active_learning_sinks[0].record_contract.dedupe_key` requires a non-empty key computed before class expansion from the upstream positive frame/source event identity, so class-expanded records collapse to one visual example per positive event while preserving noncompliance metadata.
+
+This evidence is intentionally narrow. Production notification delivery, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain outside this active-learning routing contract.
+
 ---
 
 ## Strategic shape
@@ -63,11 +75,11 @@ foreman-cv/
 ├── Plans/                                            # planning artifacts
 │   ├── P1-cheat-sheet.md
 │   └── roboflow-workspace-setup-browser-prompt.md
-├── workflow.json                                     # Phase 2 export
 ├── deploy/                                           # Phase 3 clients
 │   ├── hosted_inference.py
 │   └── local_inference.py
-├── eval/                                             # Phase 1 artifacts
+├── eval/                                             # Phase 1 artifacts + Phase 2 Workflow contract export
+│   ├── roboflow_workflow_mis_1172.json               # canonical active-learning sink audit path
 │   ├── baseline_metrics.md
 │   └── sample_predictions/
 ├── .env.op                                           # 1Password reference file

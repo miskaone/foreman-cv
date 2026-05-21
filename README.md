@@ -35,11 +35,12 @@ graph LR
     E --> F
     F --> G{Expression block:<br/>violations &gt; 0?}
     G -->|true| H[Email / Slack alert sink]
-    G -->|always| I[Dataset sink<br/>active-learning loop]
-    G -->|always| J[Bounding-box viz<br/>audit trail]
+    G -->|true| I[Post-expression positive branch<br/>violation frames only]
+    I --> J[Dataset sink<br/>active-learning loop]
+    G -->|always| K[Bounding-box viz<br/>audit trail]
 ```
 
-The expression block is where ML output becomes a business signal. That gate — and the three sinks it feeds — is the Solutions Architect conversation in one diagram: alerting (operations), active learning (model improvement), visualization (audit + reviewer trust).
+The expression block is where ML output becomes a business signal. That gate — and the sinks it feeds — is the Solutions Architect conversation in one diagram: alerting (operations), active learning from positive violation frames (model improvement), and visualization (audit + reviewer trust).
 
 ---
 

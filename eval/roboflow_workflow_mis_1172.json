@@ -1,6 +1,6 @@
 {
   "contract_version": 2,
-  "linear_issue": "MIS-1174",
+  "linear_issue": "MIS-1183",
   "parent_issue": "MIS-1172",
   "workflow": {
     "name": "foreman-mis-1172",

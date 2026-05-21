@@ -13,6 +13,7 @@ EXPECTED_DETECTION_BLOCK = "p1_object_detection"
 EXPECTED_VIOLATION_FILTER_BLOCK = "ppe_violation_filter"
 EXPECTED_VIOLATION_COUNT_BLOCK = "ppe_violation_count"
 EXPECTED_VIOLATION_EXPRESSION_BLOCK = "ppe_violation_expression"
+EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH = "post_expression_violation_positive"
 EXPECTED_OUTPUT_NAME = "p1_object_detection_predictions"
 EXPECTED_ALL_DETECTIONS_OUTPUT_NAME = "all_detections"
 EXPECTED_VIOLATIONS_OUTPUT_NAME = "ppe_violations"
@@ -26,7 +27,7 @@ EXPECTED_ACTIVE_LEARNING_SINK = {
     "project_slug": "foreman-violation-active-learning",
     "target": "mikes-workspace-3onpi/foreman-violation-active-learning",
     "provisioning": "pre_provisioned",
-    "source_output": EXPECTED_VIOLATIONS_OUTPUT_NAME,
+    "source_output": EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH,
     "positive_gate_output": EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME,
     "scope": "violation-positive examples only",
 }
@@ -87,6 +88,7 @@ ALLOWED_DEFERRED_STEP_NAMES = {
     EXPECTED_VIOLATION_FILTER_BLOCK,
     EXPECTED_VIOLATION_COUNT_BLOCK,
     EXPECTED_VIOLATION_EXPRESSION_BLOCK,
+    EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH,
 }
 ZERO_VIOLATION_SAMPLE = []
 COMPLIANT_ONLY_SAMPLE = [
@@ -94,6 +96,12 @@ COMPLIANT_ONLY_SAMPLE = [
     {"class_name": "Hardhat"},
     {"class_name": "Safety Vest"},
     {"class_name": "Mask"},
+]
+NEAR_MISS_SAMPLE = [
+    {"class_name": "Person"},
+    {"class_name": "No-Hardhat"},
+    {"class_name": "Safety-Vest-Missing"},
+    {"class_name": "no_mask"},
 ]
 POSITIVE_NONCOMPLIANCE_SAMPLE = [
     {"class_name": "Person"},
@@ -219,28 +227,61 @@ def get_one_step(steps: list[dict[str, object]], name: str) -> dict[str, object]
     return matches[0]
 
 
-def detections_count_contract_result(detections: list[dict[str, object]]) -> tuple[int, bool]:
+def detections_count_contract_result(detections: list[dict[str, object]]) -> tuple[list[dict[str, object]], int, bool]:
     ppe_violations = [
         detection
         for detection in detections
         if detection.get("class_name") in EXPECTED_VIOLATION_CLASSES
     ]
     violations = len(ppe_violations)
-    return violations, violations > 0
+    return ppe_violations, violations, violations > 0
+
+
+def post_expression_positive_result(
+    ppe_violations: list[dict[str, object]],
+    has_violations: bool,
+) -> list[dict[str, object]]:
+    return ppe_violations if has_violations else []
 
 
 def validate_sample_cases() -> bool:
-    expected_cases = [
-        ("zero ppe_violations", ZERO_VIOLATION_SAMPLE, 0, False),
-        ("compliant-only detections", COMPLIANT_ONLY_SAMPLE, 0, False),
-        ("positive noncompliance detections", POSITIVE_NONCOMPLIANCE_SAMPLE, 3, True),
+    expected_cases: list[
+        tuple[str, list[dict[str, object]], int, bool, list[dict[str, object]]]
+    ] = [
+        ("zero ppe_violations", ZERO_VIOLATION_SAMPLE, 0, False, []),
+        ("compliant-only detections", COMPLIANT_ONLY_SAMPLE, 0, False, []),
+        ("near-miss noncontract class names", NEAR_MISS_SAMPLE, 0, False, []),
+        (
+            "positive noncompliance detections",
+            POSITIVE_NONCOMPLIANCE_SAMPLE,
+            3,
+            True,
+            [
+                {"class_name": "NO-Hardhat"},
+                {"class_name": "NO-Safety Vest"},
+                {"class_name": "NO-Mask"},
+            ],
+        ),
     ]
-    for name, detections, expected_violations, expected_has_violations in expected_cases:
-        violations, has_violations = detections_count_contract_result(detections)
+    for (
+        name,
+        detections,
+        expected_violations,
+        expected_has_violations,
+        expected_positive_output,
+    ) in expected_cases:
+        ppe_violations, violations, has_violations = detections_count_contract_result(detections)
         if violations != expected_violations or has_violations != expected_has_violations:
             print(
                 f"unexpected sample result for {name}: "
                 f"violations={violations!r}, has_violations={has_violations!r}",
+                file=sys.stderr,
+            )
+            return False
+        positive_output = post_expression_positive_result(ppe_violations, has_violations)
+        if positive_output != expected_positive_output:
+            print(
+                f"unexpected post-expression positive output for {name}: {positive_output!r}",
                 file=sys.stderr,
             )
             return False
@@ -287,6 +328,7 @@ def main() -> int:
     expected_stable_contract_names = {
         "violation_count": EXPECTED_VIOLATION_COUNT_BLOCK,
         "violation_expression": EXPECTED_VIOLATION_EXPRESSION_BLOCK,
+        "post_expression_positive_branch": EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH,
         "violations": EXPECTED_VIOLATION_COUNT_OUTPUT_NAME,
         "has_violations": EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME,
     }
@@ -305,7 +347,15 @@ def main() -> int:
     violation_filter = get_one_step(steps, EXPECTED_VIOLATION_FILTER_BLOCK)
     violation_count = get_one_step(steps, EXPECTED_VIOLATION_COUNT_BLOCK)
     violation_expression = get_one_step(steps, EXPECTED_VIOLATION_EXPRESSION_BLOCK)
-    if not all((detection, violation_filter, violation_count, violation_expression)):
+    post_expression_positive = get_one_step(steps, EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH)
+    required_steps = (
+        detection,
+        violation_filter,
+        violation_count,
+        violation_expression,
+        post_expression_positive,
+    )
+    if not all(required_steps):
         return 1
 
     forbidden_steps = [
@@ -434,6 +484,58 @@ def main() -> int:
         print("unexpected violation expression switch", file=sys.stderr)
         return 1
 
+    if post_expression_positive.get("type") != "roboflow_core/expression@v1":
+        print(
+            f"unexpected post-expression positive branch type: {post_expression_positive.get('type')!r}",
+            file=sys.stderr,
+        )
+        return 1
+    if post_expression_positive.get("data") != {
+        "has_violations": f"$steps.{EXPECTED_VIOLATION_EXPRESSION_BLOCK}.output",
+        "ppe_violations": f"$steps.{EXPECTED_VIOLATION_FILTER_BLOCK}.predictions",
+    }:
+        print(
+            f"unexpected post-expression positive branch data: {post_expression_positive.get('data')!r}",
+            file=sys.stderr,
+        )
+        return 1
+    expected_post_expression_switch = {
+        "type": "CasesDefinition",
+        "cases": [
+            {
+                "type": "CaseDefinition",
+                "condition": {
+                    "type": "StatementGroup",
+                    "statements": [
+                        {
+                            "type": "BinaryStatement",
+                            "left_operand": {
+                                "type": "DynamicOperand",
+                                "operand_name": "has_violations",
+                            },
+                            "comparator": {"type": "=="},
+                            "right_operand": {
+                                "type": "StaticOperand",
+                                "value": True,
+                            },
+                        }
+                    ],
+                },
+                "result": {
+                    "type": "DynamicCaseResult",
+                    "operand_name": "ppe_violations",
+                },
+            }
+        ],
+        "default": {
+            "type": "StaticCaseResult",
+            "value": [],
+        },
+    }
+    if post_expression_positive.get("switch") != expected_post_expression_switch:
+        print("unexpected post-expression positive branch switch", file=sys.stderr)
+        return 1
+
     outputs = spec.get("outputs", [])
     expected_outputs = {
         EXPECTED_OUTPUT_NAME,
@@ -520,6 +622,22 @@ def main() -> int:
             "missing expected violation expression output contract: "
             f"(name={EXPECTED_VIOLATION_EXPRESSION_OUTPUT_NAME!r}, type={EXPECTED_OUTPUT_TYPE!r}, "
             f"selector='$steps.{EXPECTED_VIOLATION_EXPRESSION_BLOCK}.output')",
+            file=sys.stderr,
+        )
+        return 1
+
+    post_expression_outputs = [
+        output
+        for output in outputs
+        if output.get("name") == EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH
+        and output.get("type") == EXPECTED_OUTPUT_TYPE
+        and output.get("selector") == f"$steps.{EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH}.output"
+    ]
+    if len(post_expression_outputs) != 1:
+        print(
+            "missing expected post-expression positive output contract: "
+            f"(name={EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH!r}, type={EXPECTED_OUTPUT_TYPE!r}, "
+            f"selector='$steps.{EXPECTED_POST_EXPRESSION_POSITIVE_BRANCH}.output')",
             file=sys.stderr,
         )
         return 1

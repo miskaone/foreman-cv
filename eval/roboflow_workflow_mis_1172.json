@@ -1,6 +1,6 @@
 {
   "contract_version": 2,
-  "linear_issue": "MIS-1174",
+  "linear_issue": "MIS-1183",
   "parent_issue": "MIS-1172",
   "workflow": {
     "name": "foreman-mis-1172",
@@ -16,6 +16,7 @@
     "violation_output": "ppe_violations",
     "violation_count": "ppe_violation_count",
     "violation_expression": "ppe_violation_expression",
+    "post_expression_positive_branch": "post_expression_violation_positive",
     "violations": "violations",
     "has_violations": "has_violations"
   },
@@ -31,7 +32,7 @@
       "project_slug": "foreman-violation-active-learning",
       "target": "mikes-workspace-3onpi/foreman-violation-active-learning",
       "provisioning": "pre_provisioned",
-      "source_output": "ppe_violations",
+      "source_output": "post_expression_violation_positive",
       "positive_gate_output": "has_violations",
       "scope": "violation-positive examples only"
     }
@@ -174,6 +175,49 @@
             "value": false
           }
         }
+      },
+      {
+        "type": "roboflow_core/expression@v1",
+        "name": "post_expression_violation_positive",
+        "data": {
+          "has_violations": "$steps.ppe_violation_expression.output",
+          "ppe_violations": "$steps.ppe_violation_filter.predictions"
+        },
+        "switch": {
+          "type": "CasesDefinition",
+          "cases": [
+            {
+              "type": "CaseDefinition",
+              "condition": {
+                "type": "StatementGroup",
+                "statements": [
+                  {
+                    "type": "BinaryStatement",
+                    "left_operand": {
+                      "type": "DynamicOperand",
+                      "operand_name": "has_violations"
+                    },
+                    "comparator": {
+                      "type": "=="
+                    },
+                    "right_operand": {
+                      "type": "StaticOperand",
+                      "value": true
+                    }
+                  }
+                ]
+              },
+              "result": {
+                "type": "DynamicCaseResult",
+                "operand_name": "ppe_violations"
+              }
+            }
+          ],
+          "default": {
+            "type": "StaticCaseResult",
+            "value": []
+          }
+        }
       }
     ],
     "outputs": [
@@ -201,6 +245,11 @@
         "type": "JsonField",
         "name": "has_violations",
         "selector": "$steps.ppe_violation_expression.output"
+      },
+      {
+        "type": "JsonField",
+        "name": "post_expression_violation_positive",
+        "selector": "$steps.post_expression_violation_positive.output"
       }
     ]
   },
@@ -224,8 +273,9 @@
     "ppe_violation_filter keeps only exact class_name matches for NO-Hardhat, NO-Safety Vest, and NO-Mask, preserving original prediction object shape and order.",
     "ppe_violations maps directly to $steps.ppe_violation_filter.predictions; raw/all detections remain debug outputs only.",
     "violations is the numeric count from $steps.ppe_violation_filter.predictions only, and has_violations is the expression result for violations > 0.",
-    "active_learning_sinks declares one pre-provisioned shared Roboflow project target for violation-positive examples: mikes-workspace-3onpi/foreman-violation-active-learning.",
+    "post_expression_violation_positive is the named positive branch immediately downstream of has_violations; it returns ppe_violations only when has_violations is true and returns an empty list otherwise.",
+    "active_learning_sinks declares one pre-provisioned shared Roboflow project target for violation-positive examples: mikes-workspace-3onpi/foreman-violation-active-learning, sourced from post_expression_violation_positive.",
     "alert_sink_stubs declares disabled/test-only Email and Slack placeholders gated by has_violations; committed values do not send live notifications.",
-    "Active-learning sink routing/execution, production notification delivery, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
+    "Production notification delivery, visualization, normalization, enrichment, person-correlation, raw-detection fallback, compliant-detection counting, and person/PPE totals remain deferred."
   ]
 }

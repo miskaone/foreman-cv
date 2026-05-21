@@ -12,6 +12,21 @@ Newest entries at the top.
 
 ---
 
+## 2026-05-21 — MIS-1183 — Route active-learning sink through the post-expression positive branch
+
+**What I built:** Locked the active-learning routing evidence so `shared_violation_positive_examples` must source `post_expression_violation_positive`, the named branch immediately downstream of `has_violations`. The validator now rejects direct `ppe_violations` sink routing, raw/upstream routing, missing branch outputs, and branch behavior that would pass zero/compliant examples into the active-learning sink.
+
+**Test result:** Pass. `python3 -m json.tool eval/roboflow_workflow_mis_1172.json`, `python3 -m py_compile scripts/validate_roboflow_workflow_contract.py`, and `python3 scripts/validate_roboflow_workflow_contract.py` all passed.
+
+**Notes:**
+- The active-learning sink target is no longer enough by itself; the source edge is now part of the contract and must originate at the named post-expression positive branch.  #mental-model
+- Zero and compliant-only samples prove the branch emits an empty list, so negative or near-miss frames do not reach the violation-positive training sink.  #mental-model
+- The ship workflow again saw an empty `main...HEAD` diff until the implementation files were copied into the ship branch, so commit visibility remains a workflow hazard.  #surprise
+
+**PR:** [#12](https://github.com/miskaone/foreman-cv/pull/12) (pending review/merge)
+
+---
+
 ## 2026-05-20 — MIS-1174 — Configure alert sinks for violation-triggered Email and Slack notifications
 
 **What I built:** Added disabled/test-only Email and Slack alert sink stubs to `eval/roboflow_workflow_mis_1172.json`, gated by `has_violations` and sourcing `ppe_violations`. The committed stubs are non-production placeholders only: both remain `enabled: false`, `environment: test_only`, `delivery_mode: disabled`, and `sends_live_notifications: false`, so they do not send live notifications.

@@ -23,7 +23,9 @@ Newest entries at the top.
 - Missing or blank `dedupe_key` is now a hard validator failure because the sink cannot safely collapse records without event identity.  #mental-model
 - Near-miss evidence matters in both directions: same-key class-expanded records collapse, while distinct positive event keys stay separate even when they share the same class.  #mental-model
 
-**PR:** Pending ship workflow.
+**PR:** [#13](https://github.com/miskaone/foreman-cv/pull/13) (squash-merged as `7c34829`)
+
+**Review follow-up:** Hardened the validator after Copilot review so non-canonical whitespace-padded `dedupe_key` values fail and missing class/reason/source metadata cannot be merged as `None`.
 
 ---
 
